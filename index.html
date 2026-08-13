@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Ventas Subaru Nuevos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js & Chart.js Datalabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- SheetJS for Excel Reading/Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
+                    <i class="fa-solid fa-car-side text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                        SUBARU <span class="text-sky-400 font-medium text-sm px-2 py-0.5 rounded-full bg-sky-950/80 border border-sky-800/50">Nuevos</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Dashboard Ejecutivo de Ventas y Unidades Netas</p>
+                </div>
+            </div>
+
+            <!-- Global Actions & Controls -->
+            <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/60 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-slate-300 hover:text-white transition">
+                    <input type="checkbox" id="chkExcludeIntercambio" checked class="w-4 h-4 rounded border-slate-700 text-sky-500 focus:ring-sky-500/30 bg-slate-800">
+                    <span>Excluir Intercambios</span>
+                </label>
+
+                <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                    <span>Cargar Excel</span>
+                </button>
+
+                <button id="btnExportCSV" class="flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-sky-600/20">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Exportar Reporte</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
+
+        <!-- Banner Info Exclusión -->
+        <div id="bannerIntercambio" class="flex items-center justify-between bg-sky-950/40 border border-sky-800/40 rounded-xl px-4 py-2 text-xs text-sky-200">
+            <div class="flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-info text-sky-400 text-sm"></i>
+                <span>Regla de Negocio Activa: <strong>Se están excluyendo los registros con Tipo de Venta de Intercambio</strong> en todas las métricas y gráficas.</span>
+            </div>
+            <span class="bg-sky-500/20 text-sky-300 font-mono text-[10px] px-2 py-0.5 rounded border border-sky-500/30">Filtro Comercial</span>
+        </div>
+
+        <!-- FILTROS EN LA PARTE SUPERIOR -->
+        <section class="glass-panel rounded-2xl p-4 border border-slate-800 shadow-xl">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Buscador Global -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Buscar Cliente / Vin / Modelo</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                        <input type="text" id="txtSearch" placeholder="Escribe para buscar..." class="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500">
+                    </div>
+                </div>
+
+                <!-- Filtro Sucursal -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Sucursal</label>
+                    <select id="selSucursal" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="TODOS">Todas las sucursales</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Tipo de Venta -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Venta</label>
+                    <select id="selTipoVenta" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="TODOS">Todos los canales</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Vendedor -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Asesor de Ventas</label>
+                    <select id="selVendedor" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+                        <option value="TODOS">Todos los vendedores</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- FICHAS KPI (SOLO 4 SOLICITADAS) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- KPI 1: Cantidad de Unidades Vendidas -->
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Unidades Vendidas</span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-car-side"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpiUnidades">0 U.</div>
+                <p class="text-[11px] text-slate-400 mt-1">Unidades netas entregadas</p>
+            </div>
+
+            <!-- KPI 2: Venta Bruta ($) -->
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Venta Bruta</span>
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpiVentaBruta">$0.00</div>
+                <p class="text-[11px] text-slate-400 mt-1">Monto total antes de impuestos</p>
+            </div>
+
+            <!-- KPI 3: Costo ($) -->
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Costo Total</span>
+                    <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpiCosto">$0.00</div>
+                <p class="text-[11px] text-slate-400 mt-1">Costo total de adquisición</p>
+            </div>
+
+            <!-- KPI 4: % Utilidad Promedio -->
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">% Utilidad Promedio</span>
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black text-white" id="kpiUtilidad">0.00%</div>
+                <p class="text-[11px] text-slate-400 mt-1">(Venta Bruta - Costo) / Venta Bruta</p>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE DOS GRAFICAS SOLICITADAS -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Chart 1: Unidades por Sucursal -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                                <i class="fa-solid fa-store text-sky-400"></i> Performance por Sucursal
+                            </h3>
+                            <p class="text-xs text-slate-400">Cantidad de unidades netas y monto total por agencia</p>
+                        </div>
+                        <span class="bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold" id="badgeSucursales">
+                            0 Agencias
+                        </span>
+                    </div>
+                    <div class="relative h-60 w-full">
+                        <canvas id="chartSucursales"></canvas>
+                    </div>
+                </div>
+
+                <!-- Resumen rápido de Sucursales en la parte inferior de la tarjeta -->
+                <div id="sucursalesDetailCards" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800/80">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Chart 2: Tipo de Venta -->
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-indigo-400"></i> Mezcla por Tipo de Venta por Sucursal
+                        </h3>
+                        <p class="text-xs text-slate-400">Distribución de Unidades por Sucursal y Canal Comercial</p>
+                    </div>
+                </div>
+                <div class="relative h-72 w-full flex items-center justify-center">
+                    <canvas id="chartTipoVenta"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- TABLA DE DETALLE OPERATIVO -->
+        <section class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-sky-400"></i> Detalle Operativo de Ventas
+                    </h3>
+                    <p class="text-xs text-slate-400">Registros individuales procesados desde la hoja U731</p>
+                </div>
+                <span class="text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg" id="tableRecordCount">
+                    Mostrando 0 registros
+                </span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-slate-800">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900/90 text-slate-400 uppercase font-bold border-b border-slate-800">
+                        <tr>
+                            <th class="px-3 py-3">Factura</th>
+                            <th class="px-3 py-3">Fecha</th>
+                            <th class="px-3 py-3">Sucursal</th>
+                            <th class="px-3 py-3">Modelo</th>
+                            <th class="px-3 py-3">Cliente</th>
+                            <th class="px-3 py-3">Canal / Tipo</th>
+                            <th class="px-3 py-3 text-center">Cant.</th>
+                            <th class="px-3 py-3 text-right">Venta Bruta</th>
+                            <th class="px-3 py-3 text-right">Costo</th>
+                            <th class="px-3 py-3 text-right">% Utilidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblBody" class="divide-y divide-slate-800/60 font-medium">
+                        <!-- Generado dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Cargar Archivo Excel -->
+    <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+            <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl mx-auto mb-3 border border-emerald-500/20">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Cargar Nuevo Archivo</h3>
+                <p class="text-xs text-slate-400 mt-1">Selecciona el archivo Excel <code>Resumen Venta Nuevos Subaru.xlsx</code></p>
+            </div>
+
+            <div class="border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl p-8 text-center bg-slate-900/50 transition cursor-pointer" id="dropZone">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-500 mb-2"></i>
+                <p class="text-xs font-semibold text-slate-300">Haz clic o arrastra aquí tu archivo Excel</p>
+                <p class="text-[10px] text-slate-500 mt-1">Soporta archivos .xlsx / .xls</p>
+                <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Chart.register(ChartDataLabels);
+
+        // Datos iniciales precargados con costo derivado
+        const initialRawData = [
+            {
+                factura: 'CDA',
+                facturaRef: 'VEA 1022',
+                referencia: '1862447',
+                fecha: '2026-08-01',
+                modelo: 'FORESTER 2.5i TOURING + EYESIGHT CVT',
+                cliente: 'RENATA ORBEZO GARCIA',
+                sucursal: '41 VERACRUZ',
+                linea: 'FORESTER',
+                cantidad: -1,
+                monto: -574678,
+                costo: -504140,
+                subtotal: -655086.21,
+                iva: -104813.79,
+                total: -759900.00,
+                vendedor: '4135 EMILIANO SANCHEZ SAN VICENTE',
+                clasificacion: 'Venta',
+                tipoVenta: 'Financiera SFS',
+                utilidad: 12.27,
+                isan: 0,
+                tvDescripcion: 'Nota credito nuevo'
+            },
+            {
+                factura: 'VEA 625',
+                facturaRef: '',
+                referencia: '1862462',
+                fecha: '2026-08-01',
+                modelo: 'FORESTER 2.5i e-BOXER HEV CVT',
+                cliente: 'CLAUDIA JUDITH TOVAR CARRILLO',
+                sucursal: '61 OAXACA',
+                linea: 'FORESTER',
+                cantidad: 1,
+                monto: 644752,
+                costo: 581055,
+                subtotal: 715431.03,
+                iva: 114468.96,
+                total: 829899.99,
+                vendedor: '6102 LUIS JAVIER GARCIA HERNANDEZ',
+                clasificacion: 'Venta',
+                tipoVenta: 'Financiera SFS',
+                utilidad: 9.88,
+                isan: 0,
+                tvDescripcion: 'VTA. CREDITO CASA'
+            },
+            {
+                factura: 'VEA 1027',
+                facturaRef: '',
+                referencia: '1863172',
+                fecha: '2026-08-05',
+                modelo: 'FORESTER 2.5i TOURING + EYESIGHT CVT',
+                cliente: 'RENATA ORBEZO GARCIA',
+                sucursal: '41 VERACRUZ',
+                linea: 'FORESTER',
+                cantidad: 1,
+                monto: 574678,
+                costo: 532236,
+                subtotal: 655086.21,
+                iva: 104813.79,
+                total: 759900.00,
+                vendedor: '4135 EMILIANO SANCHEZ SAN VICENTE',
+                clasificacion: 'Venta',
+                tipoVenta: 'Financiera SFS',
+                utilidad: 7.39,
+                isan: 32028.24,
+                tvDescripcion: 'VTA. CONTADO'
+            },
+            {
+                factura: 'VEA 1028',
+                facturaRef: '',
+                referencia: '1862825',
+                fecha: '2026-08-05',
+                modelo: 'FORESTER 2.5i TOURING + EYESIGHT CVT',
+                cliente: 'GONZALO PLATAS GARCIA',
+                sucursal: '41 VERACRUZ',
+                linea: 'FORESTER',
+                cantidad: 1,
+                monto: 574678,
+                costo: 532236,
+                subtotal: 655086.21,
+                iva: 104813.79,
+                total: 759900.00,
+                vendedor: '4137 CHRISTIAN DE JESUS DE ANDA MARTINEZ',
+                clasificacion: 'Venta',
+                tipoVenta: 'Contado',
+                utilidad: 7.39,
+                isan: 32028.24,
+                tvDescripcion: 'VTA. CONTADO'
+            },
+            {
+                factura: 'VEA 626',
+                facturaRef: '',
+                referencia: '1864404',
+                fecha: '2026-08-11',
+                modelo: 'FORESTER 2.5i PREMIUM PLUS CVT + EYESIGHT',
+                cliente: 'CAMINO DEL SOL AUTOS',
+                sucursal: '61 OAXACA',
+                linea: 'FORESTER',
+                cantidad: 1,
+                monto: 502115,
+                costo: 502114,
+                subtotal: 502115.00,
+                iva: 80338.40,
+                total: 582453.40,
+                vendedor: 'C CASA',
+                clasificacion: 'Intercambio',
+                tipoVenta: 'Intercambio',
+                utilidad: 0.00,
+                isan: 0,
+                tvDescripcion: 'INTER. AGENCIA DIRECTO'
+            }
+        ];
+
+        let currentData = [...initialRawData];
+        let charts = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDropdowns();
+            updateDashboard();
+
+            // Event Listeners
+            document.getElementById('chkExcludeIntercambio').addEventListener('change', updateDashboard);
+            document.getElementById('txtSearch').addEventListener('input', updateDashboard);
+            document.getElementById('selSucursal').addEventListener('change', updateDashboard);
+            document.getElementById('selTipoVenta').addEventListener('change', updateDashboard);
+            document.getElementById('selVendedor').addEventListener('change', updateDashboard);
+            document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
+
+            // Modal Handlers
+            const modal = document.getElementById('mdlUpload');
+            document.getElementById('btnUploadModal').onclick = () => modal.classList.remove('hidden');
+            document.getElementById('btnCloseModal').onclick = () => modal.classList.add('hidden');
+            
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => handleFileUpload(e.target.files[0]);
+
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-sky-500'); };
+            dropZone.ondragleave = () => dropZone.classList.remove('border-sky-500');
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-sky-500');
+                if (e.dataTransfer.files.length) handleFileUpload(e.dataTransfer.files[0]);
+            };
+        });
+
+        function initDropdowns() {
+            const sucursales = [...new Set(currentData.map(d => d.sucursal).filter(Boolean))];
+            const tipos = [...new Set(currentData.map(d => d.tipoVenta).filter(Boolean))];
+            const vendedores = [...new Set(currentData.map(d => d.vendedor).filter(Boolean))];
+
+            populateSelect('selSucursal', sucursales, 'Todas las sucursales');
+            populateSelect('selTipoVenta', tipos, 'Todos los canales');
+            populateSelect('selVendedor', vendedores, 'Todos los vendedores');
+        }
+
+        function populateSelect(id, items, defaultText) {
+            const select = document.getElementById(id);
+            select.innerHTML = `<option value="TODOS">${defaultText}</option>`;
+            items.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                select.appendChild(opt);
+            });
+        }
+
+        function getFilteredData() {
+            const excludeIntercambio = document.getElementById('chkExcludeIntercambio').checked;
+            const search = document.getElementById('txtSearch').value.toLowerCase();
+            const sucursal = document.getElementById('selSucursal').value;
+            const tipoVenta = document.getElementById('selTipoVenta').value;
+            const vendedor = document.getElementById('selVendedor').value;
+
+            return currentData.filter(d => {
+                // Exclusión de intercambios
+                const isIntercambio = (d.tipoVenta === 'Intercambio' || d.clasificacion === 'Intercambio');
+                if (excludeIntercambio && isIntercambio) return false;
+
+                // Filtros
+                if (sucursal !== 'TODOS' && d.sucursal !== sucursal) return false;
+                if (tipoVenta !== 'TODOS' && d.tipoVenta !== tipoVenta) return false;
+                if (vendedor !== 'TODOS' && d.vendedor !== vendedor) return false;
+
+                // Buscador
+                if (search) {
+                    const haystack = `${d.cliente} ${d.modelo} ${d.factura} ${d.vendedor} ${d.sucursal}`.toLowerCase();
+                    if (!haystack.includes(search)) return false;
+                }
+
+                return true;
+            });
+        }
+
+        function updateDashboard() {
+            const filtered = getFilteredData();
+            const excludeIntercambio = document.getElementById('chkExcludeIntercambio').checked;
+
+            // Toggle Banner Visibility
+            const banner = document.getElementById('bannerIntercambio');
+            if (excludeIntercambio) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            // Cálculos
+            let totalUnidades = 0;
+            let totalVentaBruta = 0;
+            let totalCosto = 0;
+
+            filtered.forEach(d => {
+                totalUnidades += (d.cantidad || 0);
+                totalVentaBruta += (d.monto || 0);
+                totalCosto += (d.costo || 0);
+            });
+
+            // % Utilidad Promedio acumulada = ((Venta Bruta - Costo) / Venta Bruta) * 100
+            let porcentajeUtilidad = 0;
+            if (totalVentaBruta > 0) {
+                porcentajeUtilidad = ((totalVentaBruta - totalCosto) / totalVentaBruta) * 100;
+            }
+
+            // Actualizar Fichas KPIs
+            document.getElementById('kpiUnidades').textContent = `${totalUnidades} U.`;
+            document.getElementById('kpiVentaBruta').textContent = formatCurrency(totalVentaBruta);
+            document.getElementById('kpiCosto').textContent = formatCurrency(totalCosto);
+            document.getElementById('kpiUtilidad').textContent = `${porcentajeUtilidad.toFixed(2)}%`;
+
+            renderCharts(filtered);
+            renderTable(filtered);
+        }
+
+        function renderCharts(data) {
+            // Chart 1: Unidades por Sucursal
+            const sucursalMap = {};
+            const sucursalMontoMap = {};
+            const sucursalCostoMap = {};
+
+            data.forEach(d => {
+                const s = d.sucursal || 'Sin Sucursal';
+                if (!sucursalMap[s]) {
+                    sucursalMap[s] = 0;
+                    sucursalMontoMap[s] = 0;
+                    sucursalCostoMap[s] = 0;
+                }
+                sucursalMap[s] += (d.cantidad || 0);
+                sucursalMontoMap[s] += (d.monto || 0);
+                sucursalCostoMap[s] += (d.costo || 0);
+            });
+
+            const sucLabels = Object.keys(sucursalMap);
+            const sucUnidades = sucLabels.map(k => sucursalMap[k]);
+
+            const sucColors = sucLabels.map(label => {
+                const l = label.toUpperCase();
+                if (l.includes('VERACRUZ')) return '#38bdf8'; // Azul Cielo
+                if (l.includes('OAXACA')) return '#c86d51';   // Vintage Terracotta
+                return '#818cf8';
+            });
+
+            document.getElementById('badgeSucursales').textContent = `${sucLabels.length} Agencias`;
+
+            // Renderizado de Fichas de Sucursal en la gráfica
+            const containerSucCards = document.getElementById('sucursalesDetailCards');
+            if (containerSucCards) {
+                containerSucCards.innerHTML = '';
+                sucLabels.forEach(label => {
+                    const u = sucursalMap[label];
+                    const m = sucursalMontoMap[label];
+                    const c = sucursalCostoMap[label];
+                    const util = m > 0 ? (((m - c) / m) * 100).toFixed(2) : '0.00';
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 flex justify-between items-center';
+                    card.innerHTML = `
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-200">${label}</p>
+                            <p class="text-[10px] text-slate-400">Venta: <span class="text-slate-300 font-mono">${formatCurrency(m)}</span></p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-black text-sky-400">${u} U.</span>
+                            <p class="text-[10px] text-amber-400 font-bold">${util}% Ut.</p>
+                        </div>
+                    `;
+                    containerSucCards.appendChild(card);
+                });
+            }
+
+            createOrUpdateChart('chartSucursales', 'bar', {
+                labels: sucLabels,
+                datasets: [{
+                    label: 'Unidades Netas',
+                    data: sucUnidades,
+                    backgroundColor: sucColors,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.1)'
+                }]
+            }, {
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const val = context.raw || 0;
+                                const monto = sucursalMontoMap[label] ? formatCurrency(sucursalMontoMap[label]) : '$0.00';
+                                return ` Unidades: ${val} U. | Venta: ${monto}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#f1f5f9',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (v) => `${v} U.`
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#94a3b8', stepSize: 1 },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    x: {
+                        ticks: { color: '#94a3b8' },
+                        grid: { display: false }
+                    }
+                }
+            });
+            // Chart 2: Tipo de Venta por Sucursal
+            const tipoMap = {};
+            const montoMap = {};
+            let grandTotalUnits = 0;
+
+            data.forEach(d => {
+                const suc = d.sucursal || 'Sin Sucursal';
+                const tipo = d.tipoVenta || 'Sin Clasificar';
+                const key = `${suc} - ${tipo}`;
+                const qty = d.cantidad || 0;
+                const amt = d.monto || 0;
+
+                if (!tipoMap[key]) {
+                    tipoMap[key] = 0;
+                    montoMap[key] = 0;
+                }
+                tipoMap[key] += qty;
+                montoMap[key] += amt;
+                grandTotalUnits += qty;
+            });
+
+            const tipoLabels = Object.keys(tipoMap);
+            const tipoUnidades = tipoLabels.map(k => tipoMap[k]);
+
+            createOrUpdateChart('chartTipoVenta', 'doughnut', {
+                labels: tipoLabels,
+                datasets: [{
+                    data: tipoUnidades,
+                    backgroundColor: ['#38bdf8', '#818cf8', '#c86d51', '#34d399', '#fbbf24', '#f43f5e'],
+                    borderWidth: 2,
+                    borderColor: '#0f172a'
+                }]
+            }, {
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { 
+                            color: '#cbd5e1', 
+                            font: { size: 11, weight: '600' },
+                            padding: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const val = context.raw || 0;
+                                const total = grandTotalUnits > 0 ? grandTotalUnits : 1;
+                                const pct = ((val / total) * 100).toFixed(1);
+                                const monto = montoMap[label] ? formatCurrency(montoMap[label]) : '$0.00';
+                                return ` ${label}: ${val} U. (${pct}%) | ${monto}`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (val) => {
+                            if (val <= 0) return '';
+                            return `${val} U.`;
+                        }
+                    }
+                }
+            });
+        }
+
+        function createOrUpdateChart(canvasId, type, dataConfig, customOptions = {}) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    datalabels: {
+                        display: true
+                    },
+                    ...customOptions.plugins
+                },
+                ...customOptions
+            };
+
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: dataConfig,
+                options: options
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tblBody');
+            tbody.innerHTML = '';
+
+            document.getElementById('tableRecordCount').textContent = `Mostrando ${data.length} registros`;
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="text-center py-8 text-slate-500">
+                            No se encontraron registros para los filtros seleccionados
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/40';
+
+                const isNC = d.cantidad < 0 || d.factura === 'CDA';
+                const isIntercambio = d.tipoVenta === 'Intercambio' || d.clasificacion === 'Intercambio';
+
+                let badge = `<span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px]">${d.tipoVenta}</span>`;
+                if (isNC) {
+                    badge = `<span class="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded text-[10px] font-bold">Nota Crédito</span>`;
+                } else if (isIntercambio) {
+                    badge = `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">Intercambio (No Venta)</span>`;
+                }
+
+                // Cálculo de utilidad por registro: (Venta - Costo) / Venta
+                let utilPct = 0;
+                if (d.monto && d.monto !== 0) {
+                    utilPct = ((d.monto - d.costo) / d.monto) * 100;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-3 py-3 font-mono font-bold ${isNC ? 'text-rose-400' : 'text-slate-200'}">${d.factura || '-'}</td>
+                    <td class="px-3 py-3 text-slate-400">${d.fecha || '-'}</td>
+                    <td class="px-3 py-3 font-semibold text-slate-300">${d.sucursal || '-'}</td>
+                    <td class="px-3 py-3 text-slate-200 max-w-xs truncate" title="${d.modelo}">${d.modelo || '-'}</td>
+                    <td class="px-3 py-3 text-slate-300 max-w-xs truncate" title="${d.cliente}">${d.cliente || '-'}</td>
+                    <td class="px-3 py-3">${badge}</td>
+                    <td class="px-3 py-3 text-center font-bold ${isNC ? 'text-rose-400' : 'text-emerald-400'}">${d.cantidad} U.</td>
+                    <td class="px-3 py-3 text-right font-mono ${isIntercambio ? 'text-slate-500 line-through' : (isNC ? 'text-rose-400' : 'text-slate-200')}">${formatCurrency(d.monto)}</td>
+                    <td class="px-3 py-3 text-right font-mono ${isIntercambio ? 'text-slate-500 line-through' : 'text-slate-300'}">${formatCurrency(d.costo)}</td>
+                    <td class="px-3 py-3 text-right font-mono font-bold text-amber-400">${utilPct.toFixed(2)}%</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleFileUpload(file) {
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    if (!workbook.SheetNames.includes('U731')) {
+                        alert('El archivo no contiene la hoja requerida: U731');
+                        return;
+                    }
+
+                    const worksheet = workbook.Sheets['U731'];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    const parsedData = json.filter(r => r.Factura).map(r => {
+                        const vb = Number(r['Venta Bruta'] || r.P_compra || 0);
+                        const cst = Number(r.Costo || r.P_compra || (vb * 0.9)); // Lee Costo o aplica estimado
+                        return {
+                            factura: String(r.Factura || ''),
+                            facturaRef: String(r['Fact.Cancelada'] || ''),
+                            referencia: String(r.Referenci || ''),
+                            fecha: r.Fecha ? new Date(r.Fecha).toISOString().split('T')[0] : '',
+                            modelo: String(r.Modelo || ''),
+                            cliente: String(r.Cliente || ''),
+                            sucursal: String(r.Sucursal || ''),
+                            linea: String(r.Linea || ''),
+                            cantidad: Number(r.Cantidad || 0),
+                            monto: vb,
+                            costo: cst,
+                            subtotal: Number(r.Subtotal || 0),
+                            iva: Number(r.Iva || 0),
+                            total: Number(r.Total || 0),
+                            vendedor: String(r.Vendedor || ''),
+                            clasificacion: String(r['Clasif.'] || 'Venta'),
+                            tipoVenta: String(r['Tipo Venta'] || ''),
+                            utilidad: Number(r['%Utilidad'] || 0),
+                            isan: Number(r.ISAN || 0),
+                            tvDescripcion: String(r['TV Descripcion'] || '')
+                        };
+                    });
+
+                    if (parsedData.length > 0) {
+                        currentData = parsedData;
+                        initDropdowns();
+                        updateDashboard();
+                        document.getElementById('mdlUpload').classList.add('hidden');
+                    } else {
+                        alert('No se encontraron filas con número de factura válido.');
+                    }
+                } catch (err) {
+                    console.error('Error procesando Excel:', err);
+                    alert('Error al leer el archivo Excel.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportToCSV() {
+            const data = getFilteredData();
+            if (!data.length) return;
+
+            const headers = ['Factura', 'Fecha', 'Sucursal', 'Modelo', 'Cliente', 'Tipo Venta', 'Vendedor', 'Cantidad U.', 'Venta Bruta', 'Costo'];
+            const rows = data.map(d => [
+                `"${d.factura}"`,
+                `"${d.fecha}"`,
+                `"${d.sucursal}"`,
+                `"${d.modelo}"`,
+                `"${d.cliente}"`,
+                `"${d.tipoVenta}"`,
+                `"${d.vendedor}"`,
+                d.cantidad,
+                d.monto,
+                d.costo
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `Ventas_Subaru_Nuevos_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('es-MX', {
+                style: 'currency',
+                currency: 'MXN',
+                minimumFractionDigits: 2
+            }).format(val || 0);
+        }
+    </script>
+</body>
+</html>
