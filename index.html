@@ -328,87 +328,114 @@
                 tipoVenta: 'Financiera SFS',
                 utilidad: 9.88,
                 isan: 0,
-                tvDescripcion: 'VTA. CREDITO CASA'
+                tvDescripcion: ''
             }
         ];
 
         let currentData = [...initialRawData];
         let charts = {};
 
-        // 🔗 URL PUBLICA DE GOOGLE SHEETS (Asegúrate de colocar tu enlace aquí)
-        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRrNaEWg5abRGjMjLMDqtC8RTgpSITGUjlHbvLHlpMNG2NZB2Kcmj8CmuSnUBRBWw/pub?gid=807198167&single=true&output=csv';
+        // 🔗 URL PUBLICA DE GOOGLE SHEETS
+        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_7wFsx3IoD94vvg24GdOiHSMweTK79GK-YvcPgb7noxhtxbgH5LV4IiE5KYZ64A/pub?gid=1722328863&single=true&output=csv';
 
-                                       
         document.addEventListener('DOMContentLoaded', () => {
-            // Sincronización automática con anulación de caché del navegador al abrir
             cargarDatosDesdeGoogleSheets();
         });
 
-        // Función optimizada con Anti-Caché incorporado
+        // Función corregida: Fuerza el uso del analizador por posición exacta (Columna F = Costo, Columna G = Venta Bruta)
         async function cargarDatosDesdeGoogleSheets() {
             try {
-                // Añadimos un parámetro de tiempo aleatorio (timestamp) para forzar al navegador a descargar datos frescos y no usar caché
-                const antiCacheUrl = `${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}`;
+                // Forzamos la recarga inmediata añadiendo parámetros anti-caché únicos y cabeceras estrictas
+                const antiCacheUrl = `${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}&_r=${Math.random()}`;
                 
-                const response = await fetch(antiCacheUrl, { cache: 'no-store' });
+                const response = await fetch(antiCacheUrl, { 
+                    cache: 'reload',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                
                 if (!response.ok) throw new Error('No se pudo conectar con Google Sheets');
                 
                 const csvText = await response.text();
                 
-                // Parsear CSV usando SheetJS con header: 1 para poder acceder exactamente a las columnas por índice (Columna F = index 5, Columna G = index 6)
+                // Parsear CSV usando SheetJS con header: 1 para leer exactamente por filas y columnas índices
                 const workbook = XLSX.read(csvText, { type: 'string' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Obtenemos los datos con cabeceras estándar
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
                 if (json.length < 2) {
                     throw new Error('El archivo está vacío');
                 }
 
-                const headers = json[0].map(h => String(h || '').trim());
-                
-                // Detectar índices de columna o usar por defecto F (índice 5) y G (índice 6)
-                const idxF = 5; // Columna F (Costo)
-                const idxG = 6; // Columna G (Venta Bruta)
-
                 const parsedData = [];
+                // Identificar los índices de columna basándonos en la cabecera (fila 0) para asegurar alineación perfecta con Google Sheets y Excel
+                const headersRow = json[0] || [];
+                let idxFactura = 0, idxFactRef = 1, idxRef = 2, idxFecha = 3, idxModelo = 4, idxCosto = 5, idxMonto = 6, idxCantidad = 7, idxSucursal = -1, idxVendedor = -1, idxTipoVenta = -1, idxClasif = -1, idxLinea = -1;
+
+                headersRow.forEach((h, index) => {
+                    const text = String(h || '').trim().toLowerCase();
+                    if (text.includes('factura') && !text.includes('cancelada')) idxFactura = index;
+                    if (text.includes('cancelada') || text.includes('fact.ref')) idxFactRef = index;
+                    if (text.includes('referenci')) idxRef = index;
+                    if (text.includes('fecha')) idxFecha = index;
+                    if (text.includes('modelo')) idxModelo = index;
+                    if (text.includes('imp.costo') || text.includes('costo')) idxCosto = index;
+                    if (text.includes('venta bruta') || text.includes('monto') || text.includes('precio')) idxMonto = index;
+                    if (text.includes('cantidad')) idxCantidad = index;
+                    if (text.includes('sucursal')) idxSucursal = index;
+                    if (text.includes('vendedor')) idxVendedor = index;
+                    if (text.includes('tipo venta')) idxTipoVenta = index;
+                    if (text.includes('clasif')) idxClasif = index;
+                    if (text.includes('linea')) idxLinea = index;
+                });
+
+                // Iniciamos desde la fila 1 (saltando la cabecera en el índice 0)
                 for (let i = 1; i < json.length; i++) {
                     const r = json[i];
                     if (!r || r.length === 0) continue;
 
-                    // Mapeo por nombres de columna comunes o por índice exacto solicitado (F y G)
-                    const rawCosto = r[idxF] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
-                    const rawMonto = r[idxG] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
+                    // Extracción exacta de Costo (Columna F por defecto o índice dinámico) y Venta Bruta (Columna G por defecto o índice dinámico)
+                    const rawCosto = (idxCosto !== -1 ? r[idxCosto] : r[5]) ?? 0; 
+                    const rawMonto = (idxMonto !== -1 ? r[idxMonto] : r[6]) ?? 0; 
 
                     const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                     const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
-
-                    // Intentar recuperar los demás campos buscando por nombre en el objeto original o por índice si existe
+                    
+                    // Recuperar objetos mediante sheet_to_json estándar como respaldo para campos de texto
                     const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
 
+                    const sucVal = String(objRaw.Sucursal || (idxSucursal !== -1 ? r[idxSucursal] : '') || r[6] || r[7] || '').trim();
+                    const upperSuc = sucVal.toUpperCase();
+                    if (!upperSuc || upperSuc === 'NO DEFINIDA' || upperSuc === 'UNDEFINED' || upperSuc === 'NULL' || upperSuc === 'NAN') {
+                        continue;
+                    }
+
                     parsedData.push({
-                        factura: String(objRaw.Factura || objRaw.factura || r[0] || ''),
-                        facturaRef: String(objRaw['Fact.Cancelada'] || objRaw.facturaRef || ''),
-                        referencia: String(objRaw.Referenci || objRaw.referencia || ''),
-                        fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
-                        modelo: String(objRaw.Modelo || objRaw.modelo || ''),
-                        cliente: String(objRaw.Cliente || objRaw.cliente || ''),
-                        sucursal: String(objRaw.Sucursal || objRaw.sucursal || ''),
-                        linea: String(objRaw.Linea || objRaw.linea || ''),
-                        cantidad: Number(objRaw.Cantidad || objRaw.cantidad || 1),
+                        factura: String(objRaw.Factura || r[idxFactura] || ''),
+                        facturaRef: String(objRaw['Fact.Cancelada'] || r[idxFactRef] || ''),
+                        referencia: String(objRaw.Referenci || r[idxRef] || ''),
+                        fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : (r[idxFecha] ? new Date(r[idxFecha]).toISOString().split('T')[0] : ''),
+                        modelo: String(objRaw.Modelo || r[idxModelo] || ''),
+                        cliente: String(objRaw.Cliente || ''),
+                        sucursal: sucVal,
+                        linea: String(objRaw.Linea || (idxLinea !== -1 ? r[idxLinea] : '') || ''),
+                        cantidad: Number(objRaw.Cantidad || (idxCantidad !== -1 ? r[idxCantidad] : 1) || 1),
                         monto: vb,
                         costo: cst,
-                        subtotal: Number(objRaw.Subtotal || objRaw.subtotal || vb),
-                        iva: Number(objRaw.Iva || objRaw.iva || 0),
-                        total: Number(objRaw.Total || objRaw.total || vb),
-                        vendedor: String(objRaw.Vendedor || objRaw.vendedor || ''),
-                        clasificacion: String(objRaw['Clasif.'] || objRaw.clasificacion || 'Venta'),
-                        tipoVenta: String(objRaw['Tipo Venta'] || objRaw.tipoVenta || ''),
-                        utilidad: Number(objRaw['%Utilidad'] || objRaw.utilidad || 0),
-                        isan: Number(objRaw.ISAN || objRaw.isan || 0),
-                        tvDescripcion: String(objRaw['TV Descripcion'] || objRaw.tvDescripcion || '')
+                        subtotal: Number(objRaw.Subtotal || vb),
+                        iva: Number(objRaw.Iva || 0),
+                        total: Number(objRaw.Total || vb),
+                        vendedor: String(objRaw.Vendedor || (idxVendedor !== -1 ? r[idxVendedor] : '') || ''),
+                        clasificacion: String(objRaw['Clasif.'] || (idxClasif !== -1 ? r[idxClasif] : '') || 'Venta'),
+                        tipoVenta: String(objRaw['Tipo Venta'] || (idxTipoVenta !== -1 ? r[idxTipoVenta] : '') || ''),
+                        utilidad: Number(objRaw['%Utilidad'] || 0),
+                        isan: Number(objRaw.ISAN || 0),
+                        tvDescripcion: String(objRaw['TV Descripcion'] || '')
                     });
                 }
 
@@ -416,9 +443,8 @@
                     currentData = parsedData;
                 }
             } catch (err) {
-                console.warn('Aviso: Usando datos locales de respaldo por error de red o enlace.', err);
+                console.warn('Aviso: Usando datos de respaldo debido a un problema con Google Sheets.', err);
             } finally {
-                // Inicializar interfaz y gráficas con los datos frescos obtenidos
                 initDropdowns();
                 updateDashboard();
                 setupEventListeners();
