@@ -354,38 +354,62 @@
                 
                 const csvText = await response.text();
                 
-                // Parsear CSV usando SheetJS
+                // Parsear CSV usando SheetJS con header: 1 para poder acceder exactamente a las columnas por índice (Columna F = index 5, Columna G = index 6)
                 const workbook = XLSX.read(csvText, { type: 'string' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
+                
+                // Obtenemos los datos con cabeceras estándar
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (json.length < 2) {
+                    throw new Error('El archivo está vacío');
+                }
 
-                const parsedData = json.filter(r => r.Factura || r.modelo || r.Modelo).map(r => {
-                    const vb = Number(r['Venta Bruta'] || r.P_compra || r.monto || 0);
-                    const cst = Number(r.Costo || r.P_compra || (vb * 0.9));
-                    return {
-                        factura: String(r.Factura || r.factura || ''),
-                        facturaRef: String(r['Fact.Cancelada'] || r.facturaRef || ''),
-                        referencia: String(r.Referenci || r.referencia || ''),
-                        fecha: r.Fecha ? new Date(r.Fecha).toISOString().split('T')[0] : '',
-                        modelo: String(r.Modelo || r.modelo || ''),
-                        cliente: String(r.Cliente || r.cliente || ''),
-                        sucursal: String(r.Sucursal || r.sucursal || ''),
-                        linea: String(r.Linea || r.linea || ''),
-                        cantidad: Number(r.Cantidad || r.cantidad || 0),
+                const headers = json[0].map(h => String(h || '').trim());
+                
+                // Detectar índices de columna o usar por defecto F (índice 5) y G (índice 6)
+                const idxF = 5; // Columna F (Costo)
+                const idxG = 6; // Columna G (Venta Bruta)
+
+                const parsedData = [];
+                for (let i = 1; i < json.length; i++) {
+                    const r = json[i];
+                    if (!r || r.length === 0) continue;
+
+                    // Mapeo por nombres de columna comunes o por índice exacto solicitado (F y G)
+                    const rawCosto = r[idxF] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
+                    const rawMonto = r[idxG] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
+
+                    const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
+                    const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
+
+                    // Intentar recuperar los demás campos buscando por nombre en el objeto original o por índice si existe
+                    const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
+
+                    parsedData.push({
+                        factura: String(objRaw.Factura || objRaw.factura || r[0] || ''),
+                        facturaRef: String(objRaw['Fact.Cancelada'] || objRaw.facturaRef || ''),
+                        referencia: String(objRaw.Referenci || objRaw.referencia || ''),
+                        fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
+                        modelo: String(objRaw.Modelo || objRaw.modelo || ''),
+                        cliente: String(objRaw.Cliente || objRaw.cliente || ''),
+                        sucursal: String(objRaw.Sucursal || objRaw.sucursal || ''),
+                        linea: String(objRaw.Linea || objRaw.linea || ''),
+                        cantidad: Number(objRaw.Cantidad || objRaw.cantidad || 1),
                         monto: vb,
                         costo: cst,
-                        subtotal: Number(r.Subtotal || r.subtotal || 0),
-                        iva: Number(r.Iva || r.iva || 0),
-                        total: Number(r.Total || r.total || 0),
-                        vendedor: String(r.Vendedor || r.vendedor || ''),
-                        clasificacion: String(r['Clasif.'] || r.clasificacion || 'Venta'),
-                        tipoVenta: String(r['Tipo Venta'] || r.tipoVenta || ''),
-                        utilidad: Number(r['%Utilidad'] || r.utilidad || 0),
-                        isan: Number(r.ISAN || r.isan || 0),
-                        tvDescripcion: String(r['TV Descripcion'] || r.tvDescripcion || '')
-                    };
-                });
+                        subtotal: Number(objRaw.Subtotal || objRaw.subtotal || vb),
+                        iva: Number(objRaw.Iva || objRaw.iva || 0),
+                        total: Number(objRaw.Total || objRaw.total || vb),
+                        vendedor: String(objRaw.Vendedor || objRaw.vendedor || ''),
+                        clasificacion: String(objRaw['Clasif.'] || objRaw.clasificacion || 'Venta'),
+                        tipoVenta: String(objRaw['Tipo Venta'] || objRaw.tipoVenta || ''),
+                        utilidad: Number(objRaw['%Utilidad'] || objRaw.utilidad || 0),
+                        isan: Number(objRaw.ISAN || objRaw.isan || 0),
+                        tvDescripcion: String(objRaw['TV Descripcion'] || objRaw.tvDescripcion || '')
+                    });
+                }
 
                 if (parsedData.length > 0) {
                     currentData = parsedData;
@@ -440,6 +464,8 @@
             const matchesBase = (d) => {
                 const isIntercambio = (d.tipoVenta === 'Intercambio' || d.clasificacion === 'Intercambio');
                 if (excludeIntercambio && isIntercambio) return false;
+                const sucUpper = String(d.sucursal || '').trim().toUpperCase();
+                if (!sucUpper || sucUpper === 'NO DEFINIDA' || sucUpper === 'UNDEFINED' || sucUpper === 'NULL' || sucUpper === 'NAN') return false;
                 return true;
             };
 
@@ -449,7 +475,10 @@
                 if (curVendedor !== 'TODOS' && d.vendedor !== curVendedor) return false;
                 return true;
             });
-            const availSucursales = [...new Set(dataForSucursal.map(d => d.sucursal).filter(Boolean))];
+            const availSucursales = [...new Set(dataForSucursal.map(d => String(d.sucursal || '').trim()).filter(s => {
+                const u = s.toUpperCase();
+                return u && u !== 'NO DEFINIDA' && u !== 'UNDEFINED' && u !== 'NULL' && u !== 'NAN';
+            }))];
 
             const dataForTipoVenta = currentData.filter(d => {
                 if (!matchesBase(d)) return false;
@@ -501,6 +530,9 @@
             return currentData.filter(d => {
                 const isIntercambio = (d.tipoVenta === 'Intercambio' || d.clasificacion === 'Intercambio');
                 if (excludeIntercambio && isIntercambio) return false;
+
+                const sucUpper = String(d.sucursal || '').trim().toUpperCase();
+                if (!sucUpper || sucUpper === 'NO DEFINIDA' || sucUpper === 'UNDEFINED' || sucUpper === 'NULL' || sucUpper === 'NAN') return false;
 
                 if (sucursal !== 'TODOS' && d.sucursal !== sucursal) return false;
                 if (tipoVenta !== 'TODOS' && d.tipoVenta !== tipoVenta) return false;
@@ -928,34 +960,45 @@
                     }
 
                     const worksheet = workbook.Sheets['U731'];
-                    const json = XLSX.utils.sheet_to_json(worksheet);
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-                    const parsedData = json.filter(r => r.Factura).map(r => {
-                        const vb = Number(r['Venta Bruta'] || r.P_compra || 0);
-                        const cst = Number(r.Costo || r.P_compra || (vb * 0.9));
-                        return {
-                            factura: String(r.Factura || ''),
-                            facturaRef: String(r['Fact.Cancelada'] || ''),
-                            referencia: String(r.Referenci || ''),
-                            fecha: r.Fecha ? new Date(r.Fecha).toISOString().split('T')[0] : '',
-                            modelo: String(r.Modelo || ''),
-                            cliente: String(r.Cliente || ''),
-                            sucursal: String(r.Sucursal || ''),
-                            linea: String(r.Linea || ''),
-                            cantidad: Number(r.Cantidad || 0),
+                    if (json.length < 2) return;
+
+                    const parsedData = [];
+                    for (let i = 1; i < json.length; i++) {
+                        const r = json[i];
+                        if (!r || r.length === 0) continue;
+
+                        const rawCosto = r[5] ?? 0; // Columna F
+                        const rawMonto = r[6] ?? 0; // Columna G
+
+                        const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
+                        const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
+                        const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
+
+                        parsedData.push({
+                            factura: String(objRaw.Factura || r[0] || ''),
+                            facturaRef: String(objRaw['Fact.Cancelada'] || ''),
+                            referencia: String(objRaw.Referenci || ''),
+                            fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
+                            modelo: String(objRaw.Modelo || ''),
+                            cliente: String(objRaw.Cliente || ''),
+                            sucursal: String(objRaw.Sucursal || ''),
+                            linea: String(objRaw.Linea || ''),
+                            cantidad: Number(objRaw.Cantidad || 1),
                             monto: vb,
                             costo: cst,
-                            subtotal: Number(r.Subtotal || 0),
-                            iva: Number(r.Iva || 0),
-                            total: Number(r.Total || 0),
-                            vendedor: String(r.Vendedor || ''),
-                            clasificacion: String(r['Clasif.'] || 'Venta'),
-                            tipoVenta: String(r['Tipo Venta'] || ''),
-                            utilidad: Number(r['%Utilidad'] || 0),
-                            isan: Number(r.ISAN || 0),
-                            tvDescripcion: String(r['TV Descripcion'] || '')
-                        };
-                    });
+                            subtotal: Number(objRaw.Subtotal || vb),
+                            iva: Number(objRaw.Iva || 0),
+                            total: Number(objRaw.Total || vb),
+                            vendedor: String(objRaw.Vendedor || ''),
+                            clasificacion: String(objRaw['Clasif.'] || 'Venta'),
+                            tipoVenta: String(objRaw['Tipo Venta'] || ''),
+                            utilidad: Number(objRaw['%Utilidad'] || 0),
+                            isan: Number(objRaw.ISAN || 0),
+                            tvDescripcion: String(objRaw['TV Descripcion'] || '')
+                        });
+                    }
 
                     if (parsedData.length > 0) {
                         currentData = parsedData;
