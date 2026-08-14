@@ -141,8 +141,8 @@
                         <i class="fa-solid fa-car-side"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-black text-white" id="kpiUnidades">0 U.</div>
-                <p class="text-[11px] text-slate-400 mt-1">Unidades netas entregadas</p>
+                <div class="text-2xl font-black text-white" id="kpiUnidades">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Ventas de Unidades</p>
             </div>
 
             <!-- Venta Bruta -->
@@ -284,7 +284,7 @@
     <script>
         Chart.register(ChartDataLabels);
 
-        // Datos cargados desde el archivo Excel original
+        // Datos de respaldo por defecto
         const initialRawData = [
             {
                 factura: 'CDA',
@@ -329,90 +329,27 @@
                 utilidad: 9.88,
                 isan: 0,
                 tvDescripcion: 'VTA. CREDITO CASA'
-            },
-            {
-                factura: 'VEA 1027',
-                facturaRef: '',
-                referencia: '1863172',
-                fecha: '2026-08-05',
-                modelo: 'FORESTER 2.5i TOURING + EYESIGHT CVT',
-                cliente: 'RENATA ORBEZO GARCIA',
-                sucursal: '41 VERACRUZ',
-                linea: 'FORESTER',
-                cantidad: 1,
-                monto: 574678,
-                costo: 532236,
-                subtotal: 655086.21,
-                iva: 104813.79,
-                total: 759900.00,
-                vendedor: '4135 EMILIANO SANCHEZ SAN VICENTE',
-                clasificacion: 'Venta',
-                tipoVenta: 'Financiera SFS',
-                utilidad: 7.39,
-                isan: 32028.24,
-                tvDescripcion: 'VTA. CONTADO'
-            },
-            {
-                factura: 'VEA 1028',
-                facturaRef: '',
-                referencia: '1862825',
-                fecha: '2026-08-05',
-                modelo: 'FORESTER 2.5i TOURING + EYESIGHT CVT',
-                cliente: 'GONZALO PLATAS GARCIA',
-                sucursal: '41 VERACRUZ',
-                linea: 'FORESTER',
-                cantidad: 1,
-                monto: 574678,
-                costo: 532236,
-                subtotal: 655086.21,
-                iva: 104813.79,
-                total: 759900.00,
-                vendedor: '4137 CHRISTIAN DE JESUS DE ANDA MARTINEZ',
-                clasificacion: 'Venta',
-                tipoVenta: 'Contado',
-                utilidad: 7.39,
-                isan: 32028.24,
-                tvDescripcion: 'VTA. CONTADO'
-            },
-            {
-                factura: 'VEA 626',
-                facturaRef: '',
-                referencia: '1864404',
-                fecha: '2026-08-11',
-                modelo: 'FORESTER 2.5i PREMIUM PLUS CVT + EYESIGHT',
-                cliente: 'CAMINO DEL SOL AUTOS',
-                sucursal: '61 OAXACA',
-                linea: 'FORESTER',
-                cantidad: 1,
-                monto: 502115,
-                costo: 502114,
-                subtotal: 502115.00,
-                iva: 80338.40,
-                total: 582453.40,
-                vendedor: 'C CASA',
-                clasificacion: 'Intercambio',
-                tipoVenta: 'Intercambio',
-                utilidad: 0.00,
-                isan: 0,
-                tvDescripcion: 'INTER. AGENCIA DIRECTO'
             }
         ];
 
         let currentData = [...initialRawData];
         let charts = {};
 
-        // 🔗 URL PUBLICA DE GOOGLE SHEETS (Reemplaza este enlace con el que generaste en el Paso 1)
+        // 🔗 URL PUBLICA DE GOOGLE SHEETS (Asegúrate de colocar tu enlace aquí)
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR8UaqwhE2Us-zTB5jrVelNHW4IaOeKEQ-wGQTmdWNultvdpgVn8ISohsNFytTnaw/pub?gid=1845393653&single=true&output=csv';
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Intentar cargar datos en vivo desde Google Sheets de forma automática
+            // Sincronización automática con anulación de caché del navegador al abrir
             cargarDatosDesdeGoogleSheets();
         });
 
-        // Función para sincronizar con Google Sheets en tiempo real
+        // Función optimizada con Anti-Caché incorporado
         async function cargarDatosDesdeGoogleSheets() {
             try {
-                const response = await fetch(GOOGLE_SHEETS_CSV_URL);
+                // Añadimos un parámetro de tiempo aleatorio (timestamp) para forzar al navegador a descargar datos frescos y no usar caché
+                const antiCacheUrl = `${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}`;
+                
+                const response = await fetch(antiCacheUrl, { cache: 'no-store' });
                 if (!response.ok) throw new Error('No se pudo conectar con Google Sheets');
                 
                 const csvText = await response.text();
@@ -454,9 +391,9 @@
                     currentData = parsedData;
                 }
             } catch (err) {
-                console.warn('Usando datos locales por defecto (sin conexión a Google Sheets o URL pendiente).', err);
+                console.warn('Aviso: Usando datos locales de respaldo por error de red o enlace.', err);
             } finally {
-                // Inicializar interfaz y gráficas con los datos obtenidos
+                // Inicializar interfaz y gráficas con los datos frescos obtenidos
                 initDropdowns();
                 updateDashboard();
                 setupEventListeners();
@@ -601,7 +538,7 @@
                 porcentajeUtilidad = ((totalVentaBruta - totalCosto) / totalVentaBruta) * 100;
             }
 
-            document.getElementById('kpiUnidades').textContent = `${totalUnidades} U.`;
+            document.getElementById('kpiUnidades').textContent = `${totalUnidades}`;
             document.getElementById('kpiVentaBruta').textContent = formatCurrency(totalVentaBruta);
             document.getElementById('kpiCosto').textContent = formatCurrency(totalCosto);
             document.getElementById('kpiUtilidad').textContent = `${porcentajeUtilidad.toFixed(2)}%`;
@@ -656,7 +593,7 @@
                             <p class="text-[10px] text-slate-400">Venta: <span class="text-slate-300 font-mono">${formatCurrency(m)}</span></p>
                         </div>
                         <div class="text-right">
-                            <span class="text-xs font-black text-sky-400">${u} U.</span>
+                            <span class="text-xs font-black text-sky-400">${u}</span>
                             <p class="text-[10px] text-amber-400 font-bold">${util}% Ut.</p>
                         </div>
                     `;
@@ -770,7 +707,6 @@
                 wrapper.innerHTML = `
                     <div class="w-full flex justify-between items-center mb-2">
                         <span class="text-xs font-bold text-slate-200">${suc}</span>
-                        <span class="text-[10px] font-bold text-sky-400 bg-sky-950/60 border border-sky-800/50 px-2 py-0.5 rounded-full">${sucData.totalQty} U. Total</span>
                     </div>
                     <div class="relative h-48 w-full flex items-center justify-center">
                         <canvas id="${chartId}"></canvas>
@@ -805,10 +741,8 @@
                                 label: function(context) {
                                     const l = context.label || '';
                                     const val = context.raw || 0;
-                                    const total = sucData.totalQty > 0 ? sucData.totalQty : 1;
-                                    const pct = ((val / total) * 100).toFixed(1);
                                     const monto = sucData.montos[l] ? formatCurrency(sucData.montos[l]) : '$0.00';
-                                    return ` ${l}: ${val} U. (${pct}%) | ${monto}`;
+                                    return ` ${l}: ${val} | ${monto}`;
                                 }
                             }
                         },
@@ -818,7 +752,7 @@
                             font: { weight: 'bold', size: 11 },
                             formatter: (val) => {
                                 if (val <= 0) return '';
-                                return `${val} ${val === 1 ? 'Venta' : 'Ventas'}`;
+                                return `${val}`;
                             }
                         }
                     }
@@ -871,7 +805,7 @@
                 const vendedor = d.vendedor || 'SIN ASESOR';
                 const sucursal = d.sucursal || 'SIN SUCURSAL';
                 const linea = d.linea || 'GENERAL';
-                const key = `${vendedor}|${sucursal}|${linea}`;
+                const key = `${sucursal}|${vendedor}|${linea}`;
 
                 if (!grouped[key]) {
                     grouped[key] = {
@@ -901,25 +835,81 @@
                 return;
             }
 
-            rowsList.sort((a, b) => a.vendedor.localeCompare(b.vendedor));
+            // Ordenar primero por Sucursal y luego por Vendedor
+            rowsList.sort((a, b) => {
+                const sucCompare = a.sucursal.localeCompare(b.sucursal);
+                if (sucCompare !== 0) return sucCompare;
+                return a.vendedor.localeCompare(b.vendedor);
+            });
 
+            // Agrupar filas por Sucursal y Vendedor para calcular subtotales y totales por sucursal
+            const sucursalGroups = {};
             rowsList.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/40';
+                if (!sucursalGroups[r.sucursal]) {
+                    sucursalGroups[r.sucursal] = {
+                        vendedores: {},
+                        totalSucursalQty: 0
+                    };
+                }
+                const vKey = r.vendedor;
+                if (!sucursalGroups[r.sucursal].vendedores[vKey]) {
+                    sucursalGroups[r.sucursal].vendedores[vKey] = {
+                        items: [],
+                        totalVendedorQty: 0
+                    };
+                }
+                sucursalGroups[r.sucursal].vendedores[vKey].items.push(r);
+                sucursalGroups[r.sucursal].vendedores[vKey].totalVendedorQty += r.cantidadTotal;
+                sucursalGroups[r.sucursal].totalSucursalQty += r.cantidadTotal;
+            });
 
-                tr.innerHTML = `
-                    <td class="px-4 py-3 font-semibold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-user-circle text-sky-400 text-sm"></i>
-                        <span>${r.vendedor}</span>
+            Object.entries(sucursalGroups).forEach(([sucName, sucData]) => {
+                // Iterar sobre cada vendedor de esta sucursal
+                Object.entries(sucData.vendedores).forEach(([vendedorName, vGroup]) => {
+                    vGroup.items.forEach(r => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/40';
+
+                        tr.innerHTML = `
+                            <td class="px-4 py-3 font-semibold text-slate-100 flex items-center gap-2">
+                                <i class="fa-solid fa-user-circle text-sky-400 text-sm"></i>
+                                <span>${r.vendedor}</span>
+                            </td>
+                            <td class="px-4 py-3 text-slate-300 font-bold">${r.sucursal}</td>
+                            <td class="px-4 py-3 text-sky-300">${r.linea}</td>
+                            <td class="px-4 py-3 text-center font-black text-sm ${r.cantidadTotal < 0 ? 'text-rose-400' : 'text-emerald-400'}">
+                                ${r.cantidadTotal}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    // Fila de Subtotal por Vendedor
+                    const trSub = document.createElement('tr');
+                    trSub.className = 'bg-slate-900/60 border-b border-slate-800/80 font-bold';
+                    trSub.innerHTML = `
+                        <td colspan="3" class="px-4 py-2 text-right text-slate-400 text-xs">
+                            Subtotal Vendedor (<span class="text-sky-300">${vendedorName}</span>):
+                        </td>
+                        <td class="px-4 py-2 text-center text-xs font-black text-amber-400">
+                            ${vGroup.totalVendedorQty}
+                        </td>
+                    `;
+                    tbody.appendChild(trSub);
+                });
+
+                // Fila de Total por Sucursal
+                const trSucTotal = document.createElement('tr');
+                trSucTotal.className = 'bg-sky-950/40 border-b-2 border-sky-800/60 font-black';
+                trSucTotal.innerHTML = `
+                    <td colspan="3" class="px-4 py-2.5 text-right text-sky-200 text-xs uppercase tracking-wider">
+                        Total Sucursal <span class="text-white">${sucName}</span>:
                     </td>
-                    <td class="px-4 py-3 text-slate-300">${r.sucursal}</td>
-                    <td class="px-4 py-3 font-bold text-sky-300">${r.linea}</td>
-                    <td class="px-4 py-3 text-center font-black text-sm ${r.cantidadTotal < 0 ? 'text-rose-400' : 'text-emerald-400'}">
-                        ${r.cantidadTotal} U.
+                    <td class="px-4 py-2.5 text-center text-sm font-black text-sky-400">
+                        ${sucData.totalSucursalQty}
                     </td>
                 `;
-
-                tbody.appendChild(tr);
+                tbody.appendChild(trSucTotal);
             });
         }
 
