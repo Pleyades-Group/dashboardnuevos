@@ -369,8 +369,8 @@
                 const headers = json[0].map(h => String(h || '').trim());
                 
                 // Detectar índices de columna o usar por defecto F (índice 5) y G (índice 6)
-                const idxF = 5; // Columna F (Costo)
-                const idxG = 6; // Columna G (Venta Bruta)
+                const idxD = 5; // Columna F (Costo)
+                const idxE = 6; // Columna G (Venta Bruta)
 
                 const parsedData = [];
                 for (let i = 1; i < json.length; i++) {
@@ -378,8 +378,8 @@
                     if (!r || r.length === 0) continue;
 
                     // Mapeo por nombres de columna comunes o por índice exacto solicitado (F y G)
-                    const rawCosto = r[idxF] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
-                    const rawMonto = r[idxG] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
+                    const rawCosto = r[idxD] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
+                    const rawMonto = r[idxE] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
 
                     const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                     const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
