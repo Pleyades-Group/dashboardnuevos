@@ -354,60 +354,78 @@
                 
                 const csvText = await response.text();
                 
-                // Parsear CSV usando SheetJS con header: 1 para poder acceder exactamente a las columnas por índice (Columna F = index 5, Columna G = index 6)
+                // Parsear CSV usando SheetJS con header: 1 para detectar la fila de encabezados
                 const workbook = XLSX.read(csvText, { type: 'string' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Obtenemos los datos con cabeceras estándar
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
                 if (json.length < 2) {
                     throw new Error('El archivo está vacío');
                 }
 
-                const headers = json[0].map(h => String(h || '').trim());
+                // Buscar índices de las columnas por nombre en los encabezados (fila 0)
+                const headers = json[0].map(h => String(h || '').trim().toLowerCase());
                 
-                // Detectar índices de columna o usar por defecto F (índice 5) y G (índice 6)
-                const idxD = 5; // Columna F (Costo)
-                const idxE = 6; // Columna G (Venta Bruta)
+                let idxCosto = headers.findIndex(h => h.includes('imp.costo') || h === 'costo' || h === 'p_compra');
+                let idxVentaBruta = headers.findIndex(h => h.includes('venta bruta') || h === 'venta_bruta' || h === 'monto');
+                let idxSucursal = headers.findIndex(h => h.includes('sucursal'));
+                let idxLinea = headers.findIndex(h => h.includes('linea') || h.includes('línea'));
+                let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
+                let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor'));
+                let idxTipoVenta = headers.findIndex(h => h.includes('tipo venta') || h.includes('tipo_venta'));
+
+                // Si no se encuentran por nombre, usar por defecto las columnas estándar requeridas
+                if (idxCosto === -1) idxCosto = 3;         // Columna D (índice 3)
+                if (idxVentaBruta === -1) idxVentaBruta = 4; // Columna E (índice 4)
+                if (idxSucursal === -1) idxSucursal = 9;     // Columna J (índice 9)
+                if (idxLinea === -1) idxLinea = 10;          // Columna K (índice 10)
+                if (idxCantidad === -1) idxCantidad = 12;    // Columna M (índice 12)
+                if (idxVendedor === -1) idxVendedor = 13;    // Columna N (índice 13)
+                if (idxTipoVenta === -1) idxTipoVenta = 15;  // Columna P (índice 15)
 
                 const parsedData = [];
                 for (let i = 1; i < json.length; i++) {
                     const r = json[i];
                     if (!r || r.length === 0) continue;
 
-                    // Mapeo por nombres de columna comunes o por índice exacto solicitado (F y G)
-                    const rawCosto = r[idxD] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
-                    const rawMonto = r[idxE] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
+                    const rawCosto = r[idxCosto] ?? 0;
+                    const rawMonto = r[idxVentaBruta] ?? 0;
+                    const rawSucursal = r[idxSucursal] ?? '';
+                    const rawLinea = r[idxLinea] ?? '';
+                    const rawCantidad = r[idxCantidad] ?? 1;
+                    const rawVendedor = r[idxVendedor] ?? '';
+                    const rawTipoVenta = r[idxTipoVenta] ?? '';
 
                     const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                     const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
+                    const qty = Number(String(rawCantidad).replace(/[^0-9.-]+/g,"")) || 1;
 
-                    // Intentar recuperar los demás campos buscando por nombre en el objeto original o por índice si existe
+                    // Recuperar datos adicionales por nombre de columna si existen
                     const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
 
                     parsedData.push({
-                        factura: String(objRaw.Factura || objRaw.factura || r[0] || ''),
-                        facturaRef: String(objRaw['Fact.Cancelada'] || objRaw.facturaRef || ''),
-                        referencia: String(objRaw.Referenci || objRaw.referencia || ''),
+                        factura: String(objRaw.Factura || r[0] || ''),
+                        facturaRef: String(objRaw['Fact.Cancelada'] || ''),
+                        referencia: String(objRaw.Referenci || ''),
                         fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
-                        modelo: String(objRaw.Modelo || objRaw.modelo || ''),
-                        cliente: String(objRaw.Cliente || objRaw.cliente || ''),
-                        sucursal: String(objRaw.Sucursal || objRaw.sucursal || ''),
-                        linea: String(objRaw.Linea || objRaw.linea || ''),
-                        cantidad: Number(objRaw.Cantidad || objRaw.cantidad || 1),
+                        modelo: String(objRaw.Modelo || ''),
+                        cliente: String(objRaw.Cliente || ''),
+                        sucursal: String(objRaw.Sucursal || rawSucursal || '').trim(),
+                        linea: String(objRaw.Linea || rawLinea || '').trim(),
+                        cantidad: qty,
                         monto: vb,
                         costo: cst,
-                        subtotal: Number(objRaw.Subtotal || objRaw.subtotal || vb),
-                        iva: Number(objRaw.Iva || objRaw.iva || 0),
-                        total: Number(objRaw.Total || objRaw.total || vb),
-                        vendedor: String(objRaw.Vendedor || objRaw.vendedor || ''),
-                        clasificacion: String(objRaw['Clasif.'] || objRaw.clasificacion || 'Venta'),
-                        tipoVenta: String(objRaw['Tipo Venta'] || objRaw.tipoVenta || ''),
-                        utilidad: Number(objRaw['%Utilidad'] || objRaw.utilidad || 0),
-                        isan: Number(objRaw.ISAN || objRaw.isan || 0),
-                        tvDescripcion: String(objRaw['TV Descripcion'] || objRaw.tvDescripcion || '')
+                        subtotal: Number(objRaw.Subtotal || vb),
+                        iva: Number(objRaw.Iva || 0),
+                        total: Number(objRaw.Total || vb),
+                        vendedor: String(objRaw.Vendedor || rawVendedor || '').trim(),
+                        clasificacion: String(objRaw['Clasif.'] || 'Venta'),
+                        tipoVenta: String(objRaw['Tipo Venta'] || rawTipoVenta || '').trim(),
+                        utilidad: Number(objRaw['%Utilidad'] || 0),
+                        isan: Number(objRaw.ISAN || 0),
+                        tvDescripcion: String(objRaw['TV Descripcion'] || '')
                     });
                 }
 
@@ -954,28 +972,49 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
 
-                    if (!workbook.SheetNames.includes('U731')) {
-                        alert('El archivo no contiene la hoja requerida: U731');
-                        return;
-                    }
-
-                    const worksheet = workbook.Sheets['U731'];
+                    const sheetName = workbook.SheetNames.includes('U731') ? 'U731' : workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
                     if (json.length < 2) return;
+
+                    const headers = json[0].map(h => String(h || '').trim().toLowerCase());
+                    let idxCosto = headers.findIndex(h => h.includes('imp.costo') || h === 'costo' || h === 'p_compra');
+                    let idxVentaBruta = headers.findIndex(h => h.includes('venta bruta') || h === 'venta_bruta' || h === 'monto');
+                    let idxSucursal = headers.findIndex(h => h.includes('sucursal'));
+                    let idxLinea = headers.findIndex(h => h.includes('linea') || h.includes('línea'));
+                    let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
+                    let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor'));
+                    let idxTipoVenta = headers.findIndex(h => h.includes('tipo venta') || h.includes('tipo_venta'));
+
+                    if (idxCosto === -1) idxCosto = 3;
+                    if (idxVentaBruta === -1) idxVentaBruta = 4;
+                    if (idxSucursal === -1) idxSucursal = 9;
+                    if (idxLinea === -1) idxLinea = 10;
+                    if (idxCantidad === -1) idxCantidad = 12;
+                    if (idxVendedor === -1) idxVendedor = 13;
+                    if (idxTipoVenta === -1) idxTipoVenta = 15;
 
                     const parsedData = [];
                     for (let i = 1; i < json.length; i++) {
                         const r = json[i];
                         if (!r || r.length === 0) continue;
 
-                        const rawCosto = r[5] ?? 0; // Columna F
-                        const rawMonto = r[6] ?? 0; // Columna G
+                        const rawCosto = r[idxCosto] ?? 0;
+                        const rawMonto = r[idxVentaBruta] ?? 0;
+                        const rawSucursal = r[idxSucursal] ?? '';
+                        const rawLinea = r[idxLinea] ?? '';
+                        const rawCantidad = r[idxCantidad] ?? 1;
+                        const rawVendedor = r[idxVendedor] ?? '';
+                        const rawTipoVenta = r[idxTipoVenta] ?? '';
 
                         const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                         const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
+                        const qty = Number(String(rawCantidad).replace(/[^0-9.-]+/g,"")) || 1;
+                        
                         const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
 
+                        parsedData.persh = true; // flag
                         parsedData.push({
                             factura: String(objRaw.Factura || r[0] || ''),
                             facturaRef: String(objRaw['Fact.Cancelada'] || ''),
@@ -983,17 +1022,17 @@
                             fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
                             modelo: String(objRaw.Modelo || ''),
                             cliente: String(objRaw.Cliente || ''),
-                            sucursal: String(objRaw.Sucursal || ''),
-                            linea: String(objRaw.Linea || ''),
-                            cantidad: Number(objRaw.Cantidad || 1),
+                            sucursal: String(objRaw.Sucursal || rawSucursal || '').trim(),
+                            linea: String(objRaw.Linea || rawLinea || '').trim(),
+                            cantidad: qty,
                             monto: vb,
                             costo: cst,
                             subtotal: Number(objRaw.Subtotal || vb),
                             iva: Number(objRaw.Iva || 0),
                             total: Number(objRaw.Total || vb),
-                            vendedor: String(objRaw.Vendedor || ''),
+                            vendedor: String(objRaw.Vendedor || rawVendedor || '').trim(),
                             clasificacion: String(objRaw['Clasif.'] || 'Venta'),
-                            tipoVenta: String(objRaw['Tipo Venta'] || ''),
+                            tipoVenta: String(objRaw['Tipo Venta'] || rawTipoVenta || '').trim(),
                             utilidad: Number(objRaw['%Utilidad'] || 0),
                             isan: Number(objRaw.ISAN || 0),
                             tvDescripcion: String(objRaw['TV Descripcion'] || '')
@@ -1006,7 +1045,7 @@
                         updateDashboard();
                         document.getElementById('mdlUpload').classList.add('hidden');
                     } else {
-                        alert('No se encontraron filas con número de factura válido.');
+                        alert('No se encontraron filas con datos válidos.');
                     }
                 } catch (err) {
                     console.error('Error procesando Excel:', err);
