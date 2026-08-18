@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Ventas Seminuevos Subaru</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js & Chart.js Datalabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- SheetJS for Excel Reading/Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main, #0b0f19);
+            color: var(--text-main, #f1f5f9);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.theme-dark {
+            --bg-main: #0b0f19;
+            --text-main: #f1f5f9;
+            --panel-bg: rgba(15, 23, 42, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --header-bg: rgba(15, 23, 42, 0.8);
+            --header-border: #1e293b;
+            --input-bg: #0f172a;
+            --input-border: #334155;
+            --text-muted: #94a3b8;
+            --table-header: rgba(15, 23, 42, 0.9);
+            --table-border: #1e293b;
+        }
+
+        body.theme-light {
+            --bg-main: #f1f5f9;
+            --text-main: #0f172a;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-border: rgba(0, 0, 0, 0.08);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --header-border: #e2e8f0;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --text-muted: #64748b;
+            --table-header: rgba(241, 245, 249, 0.9);
+            --table-border: #e2e8f0;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+        }
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--card-border);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--input-bg);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--input-border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 theme-dark" id="appBody">
+
+    <!-- ENCABEZADO -->
+    <header class="sticky top-0 z-40 border-b px-4 lg:px-8 py-3" id="mainHeader" style="border-color: var(--header-border); background-color: var(--header-bg);">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+                    <i class="fa-solid fa-car text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight flex items-center gap-2" style="color: var(--text-main);">
+                        SUBARU <span class="text-amber-400 font-medium text-sm px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/50">Seminuevos</span>
+                    </h1>
+                    <p class="text-xs" style="color: var(--text-muted);">Dashboard Ejecutivo de Ventas y Unidades Seminuevas</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700/60 bg-slate-800/90 text-slate-200 hover:bg-slate-700">
+                    <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
+                    <span id="themeText">Tema Claro</span>
+                </button>
+                <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                    <span>Cargar Excel</span>
+                </button>
+                <button id="btnExportExcel" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-md">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Exportar Excel</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
+
+        <!-- FILTROS Y BUSCADOR -->
+        <section class="glass-panel rounded-2xl p-4 shadow-xl">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Empresa / Sucursal</label>
+                    <select id="selEmpresa" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <option value="TODOS">Todas las empresas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Marca</label>
+                    <select id="selMarca" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <option value="TODOS">Todas las marcas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Modelo</label>
+                    <select id="selModelo" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <option value="TODOS">Todos los modelos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Buscador General</label>
+                    <div class="relative">
+                        <input type="text" id="inputBuscar" placeholder="Buscar empresa, vendedor..." class="w-full rounded-xl pl-8 pr-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FICHAS KPI -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card rounded-2xl p-4">
+                <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">UNIDADES VENDIDAS</span>
+                <div class="text-2xl font-black mt-2" style="color: var(--text-main);" id="kpiUnidades">0</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4">
+                <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Subtotal Ventas</span>
+                <div class="text-2xl font-black mt-2" style="color: var(--text-main);" id="kpiSubtotal">$0.00</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4">
+                <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Precio de Compra Total (P.compra)</span>
+                <div class="text-2xl font-black mt-2" style="color: var(--text-main);" id="kpiCompra">$0.00</div>
+            </div>
+            <div class="glass-card rounded-2xl p-4">
+                <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">% Utilidad Promedio</span>
+                <div class="text-2xl font-black mt-2 text-indigo-400" id="kpiUtilidad">0.00%</div>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);">(Subtotal - P.compra) / Subtotal</p>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE GRÁFICAS -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Gráfica de Barras -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                                <i class="fa-solid fa-chart-column text-amber-400"></i> Cantidad de Ventas por Empresa
+                            </h3>
+                            <p class="text-xs" style="color: var(--text-muted);">Cantidad de unidades netas por agencia</p>
+                        </div>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="chartEmpresa"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficas de Dona / Distribución por Marca -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                                <i class="fa-solid fa-chart-pie text-indigo-400"></i> Distribución por Marca por Empresa
+                            </h3>
+                            <p class="text-xs" style="color: var(--text-muted);">Distribución de marcas por cada agencia</p>
+                        </div>
+                    </div>
+                    <div id="donasContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Se inyectan dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TABLA -->
+        <section class="glass-panel rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-bold" style="color: var(--text-main);">Detalle Operativo de Venta por Empresa y Vendedor</h3>
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300" id="lblContadorRegistros">0 registros</span>
+            </div>
+            <div class="overflow-x-auto rounded-xl border max-h-[550px]" style="border-color: var(--table-border);">
+                <table class="w-full text-left text-xs" style="color: var(--text-main);">
+                    <thead class="sticky top-0 uppercase font-bold border-b z-10" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
+                        <tr>
+                            <th class="px-4 py-3">Empresa</th>
+                            <th class="px-4 py-3">Vendedor</th>
+                            <th class="px-4 py-3">Marca</th>
+                            <th class="px-4 py-3">Modelo</th>
+                            <th class="px-4 py-3 text-center">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblBody" class="divide-y" style="border-color: var(--table-border);"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL CARGA EXCEL -->
+    <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
+            <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-lg font-bold mb-2 text-center" style="color: var(--text-main);">Cargar Excel (U123 Detalle)</h3>
+            <p class="text-xs text-center mb-4" style="color: var(--text-muted);">Selecciona un archivo con formato compatible que contenga la hoja de detalle de unidades.</p>
+            <div class="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer mt-2 transition hover:border-amber-500" style="border-color: var(--input-border); background-color: var(--input-bg);" id="dropZone">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-amber-400 mb-2"></i>
+                <p class="text-xs font-semibold" style="color: var(--text-main);">Haz clic o arrastra tu archivo Excel aquí</p>
+                <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Chart.register(ChartDataLabels);
+
+        let currentData = [
+            { empresa: 'VERACRUZ', vendedor: 'JUAN PEREZ', cantidad: 1, marca: 'SUBARU', modelo: 'OUTBACK', pCompra: 420000, subtotal: 480000 },
+            { empresa: 'PUEBLA', vendedor: 'MARIA LOPEZ', cantidad: 2, marca: 'TOYOTA', modelo: 'RAV4', pCompra: 510000, subtotal: 620000 }
+        ];
+        let charts = {};
+        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpNSdU1ziEql8lJe9imEiYCg2NU3AfXqiR1f3YPjzILYjPklBjDoGYQv57mlm_Dg/pub?gid=1793184638&single=true&output=csv';
+
+        const PALETA_BARARRAS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#6366f1'];
+        
+        const MARCA_COLORS = {
+            'SUBARU': '#38bdf8',
+            'TOYOTA': '#34d399',
+            'HONDA': '#f97316',
+            'NISSAN': '#818cf8',
+            'MAZDA': '#f43f5e',
+            'KIA': '#fbbf24',
+            'VOLKSWAGEN': '#c86d51',
+            'CHEVROLET': '#a855f7'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initThemeToggle();
+            cargarDatosDesdeGoogleSheets();
+        });
+
+        function initThemeToggle() {
+            const btnToggle = document.getElementById('btnToggleTheme');
+            const appBody = document.getElementById('appBody');
+            
+            const savedTheme = localStorage.getItem('subaru_theme') || 'theme-dark';
+            appBody.className = `min-h-screen pb-12 ${savedTheme}`;
+            updateThemeUI(savedTheme);
+
+            btnToggle.onclick = () => {
+                const isDark = appBody.classList.contains('theme-dark');
+                const newTheme = isDark ? 'theme-light' : 'theme-dark';
+                appBody.className = `min-h-screen pb-12 ${newTheme}`;
+                localStorage.setItem('subaru_theme', newTheme);
+                updateThemeUI(newTheme);
+                updateDashboard();
+            };
+        }
+
+        function updateThemeUI(theme) {
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            if (theme === 'theme-light') {
+                themeIcon.className = 'fa-solid fa-moon text-indigo-600';
+                themeText.textContent = 'Tema Oscuro';
+            } else {
+                themeIcon.className = 'fa-solid fa-sun text-amber-400';
+                themeText.textContent = 'Tema Claro';
+            }
+        }
+
+        async function cargarDatosDesdeGoogleSheets() {
+            try {
+                const response = await fetch(`${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}`);
+                if (!response.ok) throw new Error();
+                const csvText = await response.text();
+                procesarLibroExcel(XLSX.read(csvText, { type: 'string' }));
+            } catch (err) {
+                console.warn('Usando datos locales de respaldo.');
+                initDropdowns();
+                updateDashboard();
+                setupEventListeners();
+            }
+        }
+
+        function procesarLibroExcel(workbook) {
+            let targetSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'u123 detalle');
+            if (!targetSheetName) {
+                targetSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase().includes('detalle')) || workbook.SheetNames[0];
+            }
+            const worksheet = workbook.Sheets[targetSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+            if (json.length < 2) return;
+
+            const headers = json[0].map(h => String(h || '').trim().toLowerCase());
+            
+            let idxEmpresa = headers.findIndex(h => h.includes('empresa'));
+            let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor') || h.includes('empleado') || h.includes('nombre'));
+            let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
+            let idxMarca = headers.findIndex(h => h.includes('marca'));
+            let idxModelo = headers.findIndex(h => h.includes('modelo'));
+            let idxPCompra = headers.findIndex(h => h.includes('p.compra') || h.includes('p_compra') || h.includes('compra'));
+            let idxSubtotal = headers.findIndex(h => h.includes('subtotal'));
+
+            const parsedData = [];
+            for (let i = 1; i < json.length; i++) {
+                const r = json[i];
+                if (!r || r.length === 0) continue;
+
+                const sub = Number(String(r[idxSubtotal] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+                const comp = Number(String(r[idxPCompra] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+
+                parsedData.push({
+                    empresa: String(r[idxEmpresa] ?? 'GENERAL').trim(),
+                    vendedor: idxVendedor !== -1 ? String(r[idxVendedor] ?? 'GENERAL').trim() : 'GENERAL',
+                    cantidad: Number(String(r[idxCantidad] ?? 1).replace(/[^0-9.-]+/g,"")) || 1,
+                    marca: String(r[idxMarca] ?? 'SUBARU').trim(),
+                    modelo: String(r[idxModelo] ?? 'N/D').trim(),
+                    pCompra: comp,
+                    subtotal: sub
+                });
+            }
+
+            if (parsedData.length > 0) {
+                currentData = parsedData;
+            }
+            initDropdowns();
+            updateDashboard();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            ['selEmpresa', 'selMarca', 'selModelo'].forEach(id => {
+                document.getElementById(id).addEventListener('change', updateDashboard);
+            });
+
+            document.getElementById('inputBuscar').addEventListener('input', updateDashboard);
+
+            const modal = document.getElementById('mdlUpload');
+            document.getElementById('btnUploadModal').onclick = () => modal.classList.remove('hidden');
+            document.getElementById('btnCloseModal').onclick = () => modal.classList.add('hidden');
+            document.getElementById('btnExportExcel').onclick = exportarExcel;
+
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            dropZone.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => {
+                if(e.target.files.length > 0) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        procesarLibroExcel(XLSX.read(new Uint8Array(evt.target.result), { type: 'array' }));
+                        modal.classList.add('hidden');
+                    };
+                    reader.readAsArrayBuffer(e.target.files[0]);
+                }
+            };
+        }
+
+        function initDropdowns() {
+            const empresas = [...new Set(currentData.map(d => d.empresa))].filter(Boolean);
+            const marcas = [...new Set(currentData.map(d => d.marca))].filter(Boolean);
+            const modelos = [...new Set(currentData.map(d => d.modelo))].filter(Boolean);
+
+            poblarSelect('selEmpresa', empresas, 'Todas las empresas');
+            poblarSelect('selMarca', marcas, 'Todas las marcas');
+            poblarSelect('selModelo', modelos, 'Todos los modelos');
+        }
+
+        function poblarSelect(id, items, textoDefecto) {
+            const sel = document.getElementById(id);
+            const valActual = sel.value;
+            sel.innerHTML = `<option value="TODOS">${textoDefecto}</option>`;
+            items.sort().forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                if (item === valActual) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function getFilteredData() {
+            const empresa = document.getElementById('selEmpresa').value;
+            const marca = document.getElementById('selMarca').value;
+            const modelo = document.getElementById('selModelo').value;
+            const textoBusqueda = document.getElementById('inputBuscar').value.toLowerCase().trim();
+
+            return currentData.filter(d => {
+                if (empresa !== 'TODOS' && d.empresa !== empresa) return false;
+                if (marca !== 'TODOS' && d.marca !== marca) return false;
+                if (modelo !== 'TODOS' && d.modelo !== modelo) return false;
+                
+                if (textoBusqueda) {
+                    const matchText = `${d.empresa} ${d.vendedor} ${d.marca} ${d.modelo}`.toLowerCase();
+                    if (!matchText.includes(textoBusqueda)) return false;
+                }
+                return true;
+            });
+        }
+
+        function updateDashboard() {
+            const filtered = getFilteredData();
+
+            let totalQty = 0, totalSub = 0, totalComp = 0;
+            filtered.forEach(d => {
+                totalQty += d.cantidad;
+                totalSub += d.subtotal;
+                totalComp += d.pCompra;
+            });
+
+            let utilidadPromedio = 0;
+            if (totalSub > 0) {
+                utilidadPromedio = ((totalSub - totalComp) / totalSub) * 100;
+            }
+
+            document.getElementById('kpiUnidades').textContent = totalQty;
+            document.getElementById('kpiSubtotal').textContent = formatCurrency(totalSub);
+            document.getElementById('kpiCompra').textContent = formatCurrency(totalComp);
+            document.getElementById('kpiUtilidad').textContent = `${utilidadPromedio.toFixed(2)}%`;
+            document.getElementById('lblContadorRegistros').textContent = `${filtered.length} registros`;
+
+            renderChartBar(filtered);
+            renderDonasPorEmpresa(filtered);
+            renderGroupedTable(filtered);
+        }
+
+        function renderChartBar(data) {
+            const map = {};
+            data.forEach(d => {
+                map[d.empresa] = (map[d.empresa] || 0) + d.cantidad;
+            });
+
+            const labels = Object.keys(map);
+            const values = labels.map(l => map[l]);
+            const backgroundColors = labels.map((_, index) => PALETA_BARARRAS[index % PALETA_BARARRAS.length]);
+
+            const ctx = document.getElementById('chartEmpresa').getContext('2d');
+            if (charts['chartEmpresa']) charts['chartEmpresa'].destroy();
+
+            const isDark = document.getElementById('appBody').classList.contains('theme-dark');
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            charts['chartEmpresa'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Unidades',
+                        data: values,
+                        backgroundColor: backgroundColors,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.15)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: { top: 24, right: 12, left: 12, bottom: 8 }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    return ` Cantidad: ${val} ${val === 1 ? 'Venta' : 'Ventas'}`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: true,
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 4,
+                            color: '#38bdf8',
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            borderColor: 'rgba(56, 189, 248, 0.5)',
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            padding: { top: 4, bottom: 4, left: 8, right: 8 },
+                            font: { weight: 'bold', size: 12 },
+                            formatter: (v) => `${v} ${v === 1 ? 'Venta' : 'Ventas'}`
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grace: '20%',
+                            ticks: { color: textColor, stepSize: 1 },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: textColor, font: { weight: '600' } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDonasPorEmpresa(data) {
+            const container = document.getElementById('donasContainer');
+            container.innerHTML = '';
+
+            Object.keys(charts).forEach(key => {
+                if (key.startsWith('dona_')) {
+                    charts[key].destroy();
+                    delete charts[key];
+                }
+            });
+
+            const empresasMap = {};
+            data.forEach(d => {
+                if (!empresasMap[d.empresa]) {
+                    empresasMap[d.empresa] = {};
+                }
+                empresasMap[d.empresa][d.marca] = (empresasMap[d.empresa][d.marca] || 0) + d.cantidad;
+            });
+
+            const empresas = Object.keys(empresasMap);
+
+            if (empresas.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center py-10 text-slate-500 text-xs">No hay datos para mostrar gráficas de dona.</div>`;
+                return;
+            }
+
+            const isDark = document.getElementById('appBody').classList.contains('theme-dark');
+            const textColor = isDark ? '#f1f5f9' : '#0f172a';
+            const fallbackPalette = ['#38bdf8', '#818cf8', '#c86d51', '#34d399', '#fbbf24', '#f43f5e'];
+
+            empresas.forEach((empresa, idx) => {
+                const marcasData = empresasMap[empresa];
+                const labels = Object.keys(marcasData);
+                const values = labels.map(l => marcasData[l]);
+                
+                const brandColors = labels.map((marca, mIdx) => {
+                    const mUpper = marca.toUpperCase();
+                    return MARCA_COLORS[mUpper] || fallbackPalette[mIdx % fallbackPalette.length];
+                });
+
+                const canvasId = `donaCanvas_${idx}`;
+
+                let summaryHtml = '<div class="w-full mt-3 pt-3 border-t" style="border-color: var(--table-border);">';
+                labels.forEach((tipoLabel, tIdx) => {
+                    const cant = marcasData[tipoLabel];
+                    const colorDot = brandColors[tIdx];
+                    summaryHtml += `
+                        <div class="flex justify-between items-center text-[11px] py-0.5">
+                            <span class="flex items-center gap-2" style="color: var(--text-main);">
+                                <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${colorDot};"></span>
+                                ${tipoLabel}
+                            </span>
+                            <span class="font-bold text-sky-400 font-mono">${cant} ${cant === 1 ? 'Venta' : 'Ventas'}</span>
+                        </div>
+                    `;
+                });
+                summaryHtml += '</div>';
+
+                const card = document.createElement('div');
+                card.className = 'border rounded-xl p-3 flex flex-col items-center justify-between';
+                card.style.backgroundColor = 'var(--input-bg)';
+                card.style.borderColor = 'var(--table-border)';
+                card.innerHTML = `
+                    <div class="w-full flex justify-between items-center mb-1">
+                        <span class="text-xs font-bold" style="color: var(--text-main);">${empresa}</span>
+                    </div>
+                    <div class="relative h-36 w-full flex items-center justify-center">
+                        <canvas id="${canvasId}"></canvas>
+                    </div>
+                    ${summaryHtml}
+                `;
+                container.appendChild(card);
+
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                charts[`dona_${empresa}`] = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: brandColors,
+                            borderWidth: 2,
+                            borderColor: 'var(--panel-bg)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const l = context.label || '';
+                                        const val = context.raw || 0;
+                                        return ` ${l}: ${val} ${val === 1 ? 'Venta' : 'Ventas'}`;
+                                    }
+                                }
+                            },
+                            datalabels: {
+                                display: true,
+                                color: '#ffffff',
+                                font: { weight: 'bold', size: 11 },
+                                formatter: (value) => value > 0 ? value : ''
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderGroupedTable(data) {
+            const tbody = document.getElementById('tblBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-500">No se encontraron registros con los filtros seleccionados.</td></tr>`;
+                return;
+            }
+
+            const grouped = {};
+            data.forEach(d => {
+                if (!grouped[d.empresa]) grouped[d.empresa] = {};
+                if (!grouped[d.empresa][d.vendedor]) grouped[d.empresa][d.vendedor] = [];
+                grouped[d.empresa][d.vendedor].push(d);
+            });
+
+            for (const empresa in grouped) {
+                let totalEmpresa = 0;
+
+                for (const vendedor in grouped[empresa]) {
+                    const items = grouped[empresa][vendedor];
+                    let totalVendedor = 0;
+
+                    items.forEach((d, index) => {
+                        totalVendedor += d.cantidad;
+                        totalEmpresa += d.cantidad;
+
+                        const tr = document.createElement('tr');
+                        tr.className = 'border-b transition hover:bg-slate-500/10';
+                        tr.style.borderColor = 'var(--table-border)';
+                        tr.innerHTML = `
+                            <td class="px-4 py-2.5 font-bold ${index === 0 ? 'text-amber-500 dark:text-amber-400' : 'text-transparent'}">${index === 0 ? empresa : ''}</td>
+                            <td class="px-4 py-2.5 font-semibold" style="color: var(--text-main);">${vendedor}</td>
+                            <td class="px-4 py-2.5" style="color: var(--text-main);">${d.marca}</td>
+                            <td class="px-4 py-2.5" style="color: var(--text-muted);">${d.modelo}</td>
+                            <td class="px-4 py-2.5 text-center font-black text-emerald-500 dark:text-emerald-400">${d.cantidad}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    const trSub = document.createElement('tr');
+                    trSub.className = 'bg-sky-50 dark:bg-slate-800/40 border-b font-semibold';
+                    trSub.style.borderColor = 'var(--table-border)';
+                    trSub.innerHTML = `
+                        <td class="px-4 py-2"></td>
+                        <td class="px-4 py-2 text-xs text-sky-600 dark:text-sky-400" colspan="3">Subtotal Vendedor (${vendedor}):</td>
+                        <td class="px-4 py-2 text-center text-sky-600 dark:text-sky-400 font-bold">${totalVendedor}</td>
+                    `;
+                    tbody.appendChild(trSub);
+                }
+
+                const trTotal = document.createElement('tr');
+                trTotal.className = 'border-b-2 font-bold';
+                trTotal.style.backgroundColor = '#fef3c7';
+                trTotal.style.color = '#78350f';
+                trTotal.style.borderColor = 'var(--table-border)';
+                trTotal.innerHTML = `
+                    <td class="px-4 py-3 uppercase" colspan="4">Total Sucursal / Empresa (${empresa}):</td>
+                    <td class="px-4 py-3 text-center text-base font-black">${totalEmpresa}</td>
+                `;
+                tbody.appendChild(trTotal);
+            }
+        }
+
+        function exportarExcel() {
+            const filtered = getFilteredData();
+            if (filtered.length === 0) {
+                alert('No hay datos para exportar.');
+                return;
+            }
+
+            const dataToExport = filtered.map(d => ({
+                Empresa: d.empresa,
+                Vendedor: d.vendedor,
+                Marca: d.marca,
+                Modelo: d.modelo,
+                Cantidad: d.cantidad,
+                'Precio Compra': d.pCompra,
+                Subtotal: d.subtotal,
+                '% Utilidad': d.subtotal > 0 ? Number((((d.subtotal - d.pCompra) / d.subtotal) * 100).toFixed(2)) : 0
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "U123 Detalle Filtrado");
+            XLSX.writeFile(workbook, "Reporte_Seminuevos_Subaru.xlsx");
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0);
+        }
+    </script>
+</body>
+</html>
