@@ -115,11 +115,11 @@
 
     <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
 
-        <!-- FILTROS Y BUSCADOR -->
+        <!-- FILTROS EN CASCADA -->
         <section class="glass-panel rounded-2xl p-4 shadow-xl">
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Empresa / Sucursal</label>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Empresa</label>
                     <select id="selEmpresa" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
                         <option value="TODOS">Todas las empresas</option>
                     </select>
@@ -131,17 +131,10 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Modelo</label>
-                    <select id="selModelo" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
-                        <option value="TODOS">Todos los modelos</option>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Vendedor</label>
+                    <select id="selVendedor" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <option value="TODOS">Todos los vendedores</option>
                     </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Buscador General</label>
-                    <div class="relative">
-                        <input type="text" id="inputBuscar" placeholder="Buscar empresa, vendedor..." class="w-full rounded-xl pl-8 pr-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
-                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
-                    </div>
                 </div>
             </div>
         </section>
@@ -361,11 +354,9 @@
         }
 
         function setupEventListeners() {
-            ['selEmpresa', 'selMarca', 'selModelo'].forEach(id => {
+            ['selEmpresa', 'selMarca', 'selVendedor'].forEach(id => {
                 document.getElementById(id).addEventListener('change', updateDashboard);
             });
-
-            document.getElementById('inputBuscar').addEventListener('input', updateDashboard);
 
             const modal = document.getElementById('mdlUpload');
             document.getElementById('btnUploadModal').onclick = () => modal.classList.remove('hidden');
@@ -388,18 +379,43 @@
         }
 
         function initDropdowns() {
-            const empresas = [...new Set(currentData.map(d => d.empresa))].filter(Boolean);
-            const marcas = [...new Set(currentData.map(d => d.marca))].filter(Boolean);
-            const modelos = [...new Set(currentData.map(d => d.modelo))].filter(Boolean);
-
-            poblarSelect('selEmpresa', empresas, 'Todas las empresas');
-            poblarSelect('selMarca', marcas, 'Todas las marcas');
-            poblarSelect('selModelo', modelos, 'Todos los modelos');
+            updateDropdownsOptions();
         }
 
-        function poblarSelect(id, items, textoDefecto) {
+        function updateDropdownsOptions() {
+            const curEmpresa = document.getElementById('selEmpresa').value;
+            const curMarca = document.getElementById('selMarca').value;
+            const curVendedor = document.getElementById('selVendedor').value;
+
+            // Filtros cruzados dependientes (Cascada)
+            const dataForEmpresa = currentData.filter(d => {
+                if (curMarca !== 'TODOS' && d.marca !== curMarca) return false;
+                if (curVendedor !== 'TODOS' && d.vendedor !== curVendedor) return false;
+                return true;
+            });
+            const empresas = [...new Set(dataForEmpresa.map(d => d.empresa))].filter(Boolean);
+
+            const dataForMarca = currentData.filter(d => {
+                if (curEmpresa !== 'TODOS' && d.empresa !== curEmpresa) return false;
+                if (curVendedor !== 'TODOS' && d.vendedor !== curVendedor) return false;
+                return true;
+            });
+            const marcas = [...new Set(dataForMarca.map(d => d.marca))].filter(Boolean);
+
+            const dataForVendedor = currentData.filter(d => {
+                if (curEmpresa !== 'TODOS' && d.empresa !== curEmpresa) return false;
+                if (curMarca !== 'TODOS' && d.marca !== curMarca) return false;
+                return true;
+            });
+            const vendedores = [...new Set(dataForVendedor.map(d => d.vendedor))].filter(Boolean);
+
+            poblarSelect('selEmpresa', empresas, 'Todas las empresas', curEmpresa);
+            poblarSelect('selMarca', marcas, 'Todas las marcas', curMarca);
+            poblarSelect('selVendedor', vendedores, 'Todos los vendedores', curVendedor);
+        }
+
+        function poblarSelect(id, items, textoDefecto, valActual) {
             const sel = document.getElementById(id);
-            const valActual = sel.value;
             sel.innerHTML = `<option value="TODOS">${textoDefecto}</option>`;
             items.sort().forEach(item => {
                 const opt = document.createElement('option');
@@ -408,28 +424,26 @@
                 if (item === valActual) opt.selected = true;
                 sel.appendChild(opt);
             });
+            if (valActual !== 'TODOS' && !items.includes(valActual)) {
+                sel.value = 'TODOS';
+            }
         }
 
         function getFilteredData() {
             const empresa = document.getElementById('selEmpresa').value;
             const marca = document.getElementById('selMarca').value;
-            const modelo = document.getElementById('selModelo').value;
-            const textoBusqueda = document.getElementById('inputBuscar').value.toLowerCase().trim();
+            const vendedor = document.getElementById('selVendedor').value;
 
             return currentData.filter(d => {
                 if (empresa !== 'TODOS' && d.empresa !== empresa) return false;
                 if (marca !== 'TODOS' && d.marca !== marca) return false;
-                if (modelo !== 'TODOS' && d.modelo !== modelo) return false;
-                
-                if (textoBusqueda) {
-                    const matchText = `${d.empresa} ${d.vendedor} ${d.marca} ${d.modelo}`.toLowerCase();
-                    if (!matchText.includes(textoBusqueda)) return false;
-                }
+                if (vendedor !== 'TODOS' && d.vendedor !== vendedor) return false;
                 return true;
             });
         }
 
         function updateDashboard() {
+            updateDropdownsOptions();
             const filtered = getFilteredData();
 
             let totalQty = 0, totalSub = 0, totalComp = 0;
