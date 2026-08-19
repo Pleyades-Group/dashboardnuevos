@@ -38,6 +38,9 @@
             --text-muted: #94a3b8;
             --table-header: rgba(15, 23, 42, 0.9);
             --table-border: #1e293b;
+            --table-row-text: #f1f5f9;
+            --table-row-year-dark: #ffffff;
+            --table-row-year-light: #0f172a;
         }
 
         body.theme-light {
@@ -54,6 +57,9 @@
             --text-muted: #64748b;
             --table-header: rgba(241, 245, 249, 0.9);
             --table-border: #e2e8f0;
+            --table-row-text: #0f172a;
+            --table-row-year-dark: #ffffff;
+            --table-row-year-light: #0f172a;
         }
 
         .glass-panel {
@@ -173,8 +179,12 @@
                             <p class="text-xs" style="color: var(--text-muted);">Cantidad de unidades netas por agencia</p>
                         </div>
                     </div>
-                    <div class="relative h-64 w-full">
+                    <div class="relative h-60 w-full">
                         <canvas id="chartEmpresa"></canvas>
+                    </div>
+                    <!-- Resumen Estilo Dashboard Nuevos (Grid de Tarjetas por Empresa) -->
+                    <div id="barChartSummary" class="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto" style="border-color: var(--table-border);">
+                        <!-- Inyectado dinámicamente -->
                     </div>
                 </div>
             </div>
@@ -200,7 +210,7 @@
         <!-- TABLA -->
         <section class="glass-panel rounded-2xl p-5 shadow-xl">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-base font-bold" style="color: var(--text-main);">Detalle Operativo de Venta por Empresa y Vendedor</h3>
+                <h3 class="text-base font-bold" style="color: var(--text-main);">Detalle Operativo de Venta por Empresa</h3>
                 <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300" id="lblContadorRegistros">0 registros</span>
             </div>
             <div class="overflow-x-auto rounded-xl border max-h-[550px]" style="border-color: var(--table-border);">
@@ -211,6 +221,7 @@
                             <th class="px-4 py-3">Vendedor</th>
                             <th class="px-4 py-3">Marca</th>
                             <th class="px-4 py-3">Modelo</th>
+                            <th class="px-4 py-3 text-center">Año</th>
                             <th class="px-4 py-3 text-center">Cantidad</th>
                         </tr>
                     </thead>
@@ -238,8 +249,8 @@
         Chart.register(ChartDataLabels);
 
         let currentData = [
-            { empresa: 'VERACRUZ', vendedor: 'JUAN PEREZ', cantidad: 1, marca: 'SUBARU', modelo: 'OUTBACK', pCompra: 420000, subtotal: 480000 },
-            { empresa: 'PUEBLA', vendedor: 'MARIA LOPEZ', cantidad: 2, marca: 'TOYOTA', modelo: 'RAV4', pCompra: 510000, subtotal: 620000 }
+            { empresa: 'VERACRUZ', vendedor: 'JUAN PEREZ', cantidad: 1, marca: 'SUBARU', modelo: 'OUTBACK', ano: 2022, pCompra: 420000, subtotal: 480000 },
+            { empresa: 'PUEBLA', vendedor: 'MARIA LOPEZ', cantidad: 2, marca: 'TOYOTA', modelo: 'RAV4', ano: 2023, pCompra: 510000, subtotal: 620000 }
         ];
         let charts = {};
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-ZvwkZhoozTMicDSsYnN5m0fPt4Q69JHRrOt5NKN79yPdj1NMnlx8U-8sQmZqyw/pub?gid=1608466117&single=true&output=csv';
@@ -323,6 +334,7 @@
             let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
             let idxMarca = headers.findIndex(h => h.includes('marca'));
             let idxModelo = headers.findIndex(h => h.includes('modelo'));
+            let idxAno = headers.findIndex(h => h.includes('año') || h.includes('ano') || h === 'y');
             let idxPCompra = headers.findIndex(h => h.includes('p.compra') || h.includes('p_compra') || h.includes('compra'));
             let idxSubtotal = headers.findIndex(h => h.includes('subtotal'));
 
@@ -333,6 +345,7 @@
 
                 const sub = Number(String(r[idxSubtotal] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
                 const comp = Number(String(r[idxPCompra] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+                let anoVal = idxAno !== -1 ? r[idxAno] : (r[24] ?? 2023);
 
                 parsedData.push({
                     empresa: String(r[idxEmpresa] ?? 'GENERAL').trim(),
@@ -340,6 +353,7 @@
                     cantidad: Number(String(r[idxCantidad] ?? 1).replace(/[^0-9.-]+/g,"")) || 1,
                     marca: String(r[idxMarca] ?? 'SUBARU').trim(),
                     modelo: String(r[idxModelo] ?? 'N/D').trim(),
+                    ano: Number(String(anoVal).replace(/[^0-9]/g, '')) || 2023,
                     pCompra: comp,
                     subtotal: sub
                 });
@@ -387,7 +401,6 @@
             const curMarca = document.getElementById('selMarca').value;
             const curVendedor = document.getElementById('selVendedor').value;
 
-            // Filtros cruzados dependientes (Cascada)
             const dataForEmpresa = currentData.filter(d => {
                 if (curMarca !== 'TODOS' && d.marca !== curMarca) return false;
                 if (curVendedor !== 'TODOS' && d.vendedor !== curVendedor) return false;
@@ -465,8 +478,70 @@
             document.getElementById('lblContadorRegistros').textContent = `${filtered.length} registros`;
 
             renderChartBar(filtered);
+            renderBarChartSummary(filtered);
             renderDonasPorEmpresa(filtered);
             renderGroupedTable(filtered);
+        }
+
+        function renderBarChartSummary(data) {
+            const container = document.getElementById('barChartSummary');
+            container.innerHTML = '';
+
+            const empresaMap = {};
+            data.forEach(d => {
+                if (!empresaMap[d.empresa]) {
+                    empresaMap[d.empresa] = { unidades: 0, subtotal: 0, costo: 0 };
+                }
+                empresaMap[d.empresa].unidades += d.cantidad;
+                empresaMap[d.empresa].subtotal += d.subtotal;
+                empresaMap[d.empresa].costo += d.pCompra;
+            });
+
+            let empresas = Object.keys(empresaMap);
+            if (empresas.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center text-xs py-4" style="color: var(--text-muted);">No hay datos disponibles</div>`;
+                return;
+            }
+
+            empresas.sort((a, b) => {
+                if (a.toUpperCase().includes('PUEBLA')) return -1;
+                if (b.toUpperCase().includes('PUEBLA')) return 1;
+                return a.localeCompare(b);
+            });
+
+            empresas.forEach((empresa, idx) => {
+                const info = empresaMap[empresa];
+                const utilidadMonto = info.subtotal - info.costo;
+                const margenUtilidad = info.subtotal > 0 ? (utilidadMonto / info.subtotal) * 100 : 0;
+                
+                const colorDot = PALETA_BARARRAS[idx % PALETA_BARARRAS.length];
+
+                const card = document.createElement('div');
+                card.className = 'p-3 rounded-xl border flex flex-col justify-between gap-2 shadow-sm';
+                card.style.backgroundColor = 'var(--input-bg)';
+                card.style.borderColor = 'var(--table-border)';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full inline-block flex-shrink-0 shadow-sm" style="background-color: ${colorDot};"></span>
+                            <span class="font-extrabold uppercase text-xs tracking-wide" style="color: var(--text-main);">${empresa}</span>
+                        </div>
+                        <span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-950/60 text-sky-400 border border-sky-800/40">${info.unidades} ${info.unidades === 1 ? 'Unidad' : 'Unidades'}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t text-[11px]" style="border-color: var(--table-border);">
+                        <div>
+                            <span style="color: var(--text-muted);" class="block text-[10px] uppercase font-semibold">Subtotal</span>
+                            <strong class="font-mono text-xs" style="color: var(--text-main);">${formatCurrency(info.subtotal)}</strong>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted);" class="block text-[10px] uppercase font-semibold">Utilidad (${margenUtilidad.toFixed(1)}%)</span>
+                            <strong class="font-mono text-xs text-emerald-400">${formatCurrency(utilidadMonto)}</strong>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
         }
 
         function renderChartBar(data) {
@@ -560,59 +635,79 @@
             const empresasMap = {};
             data.forEach(d => {
                 if (!empresasMap[d.empresa]) {
-                    empresasMap[d.empresa] = {};
+                    empresasMap[d.empresa] = [];
                 }
-                empresasMap[d.empresa][d.marca] = (empresasMap[d.empresa][d.marca] || 0) + d.cantidad;
+                empresasMap[d.empresa].push(d);
             });
 
             const empresas = Object.keys(empresasMap);
-
             if (empresas.length === 0) {
                 container.innerHTML = `<div class="col-span-2 text-center py-10 text-slate-500 text-xs">No hay datos para mostrar gráficas de dona.</div>`;
                 return;
             }
 
-            const isDark = document.getElementById('appBody').classList.contains('theme-dark');
-            const textColor = isDark ? '#f1f5f9' : '#0f172a';
+            empresas.sort((a, b) => {
+                if (a.toUpperCase().includes('PUEBLA')) return -1;
+                if (b.toUpperCase().includes('PUEBLA')) return 1;
+                return a.localeCompare(b);
+            });
+
             const fallbackPalette = ['#38bdf8', '#818cf8', '#c86d51', '#34d399', '#fbbf24', '#f43f5e'];
 
             empresas.forEach((empresa, idx) => {
-                const marcasData = empresasMap[empresa];
-                const labels = Object.keys(marcasData);
-                const values = labels.map(l => marcasData[l]);
+                const itemsEmpresa = empresasMap[empresa];
                 
-                const brandColors = labels.map((marca, mIdx) => {
+                const marcaMap = {};
+                itemsEmpresa.forEach(d => {
+                    marcaMap[d.marca] = (marcaMap[d.marca] || 0) + d.cantidad;
+                });
+
+                const labelsMarca = Object.keys(marcaMap);
+                const valuesMarca = labelsMarca.map(l => marcaMap[l]);
+                const brandColors = labelsMarca.map((marca, mIdx) => {
                     const mUpper = marca.toUpperCase();
                     return MARCA_COLORS[mUpper] || fallbackPalette[mIdx % fallbackPalette.length];
                 });
 
                 const canvasId = `donaCanvas_${idx}`;
 
-                let summaryHtml = '<div class="w-full mt-3 pt-3 border-t" style="border-color: var(--table-border);">';
-                labels.forEach((tipoLabel, tIdx) => {
-                    const cant = marcasData[tipoLabel];
-                    const colorDot = brandColors[tIdx];
+                let summaryHtml = '<div class="w-full mt-3 pt-3 border-t space-y-1.5 text-xs" style="border-color: var(--table-border);">';
+                
+                const detalleMap = {};
+                itemsEmpresa.forEach(d => {
+                    const key = `${d.marca} | ${d.modelo} | ${d.ano}`;
+                    if (!detalleMap[key]) {
+                        detalleMap[key] = { marca: d.marca, modelo: d.modelo, ano: d.ano, cantidad: 0 };
+                    }
+                    detalleMap[key].cantidad += d.cantidad;
+                });
+
+                Object.values(detalleMap).forEach(det => {
+                    const colorDot = MARCA_COLORS[det.marca.toUpperCase()] || '#38bdf8';
                     summaryHtml += `
-                        <div class="flex justify-between items-center text-[11px] py-0.5">
-                            <span class="flex items-center gap-2" style="color: var(--text-main);">
-                                <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${colorDot};"></span>
-                                ${tipoLabel}
+                        <div class="flex justify-between items-center py-1.5 px-2 rounded bg-slate-500/10 border border-slate-700/30 gap-1.5">
+                            <span class="flex items-center gap-1.5 truncate" style="color: var(--text-main);" title="${det.marca} ${det.modelo} (${det.ano})">
+                                <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style="background-color: ${colorDot};"></span>
+                                <span class="font-extrabold uppercase tracking-tight">${det.marca}</span> 
+                                <span class="font-medium truncate" style="color: var(--text-muted);">${det.modelo}</span>
+                                <span class="text-xs px-1.5 py-0.5 rounded-md font-mono font-bold bg-sky-950/85 text-sky-300 border border-sky-700/50 flex-shrink-0">${det.ano}</span>
                             </span>
-                            <span class="font-bold text-sky-400 font-mono">${cant} ${cant === 1 ? 'Venta' : 'Ventas'}</span>
+                            <span class="font-black text-emerald-400 font-mono text-sm flex-shrink-0">${det.cantidad}</span>
                         </div>
                     `;
                 });
+
                 summaryHtml += '</div>';
 
                 const card = document.createElement('div');
-                card.className = 'border rounded-xl p-3 flex flex-col items-center justify-between';
+                card.className = 'border rounded-xl p-4 flex flex-col items-center justify-between shadow-sm';
                 card.style.backgroundColor = 'var(--input-bg)';
                 card.style.borderColor = 'var(--table-border)';
                 card.innerHTML = `
-                    <div class="w-full flex justify-between items-center mb-1">
-                        <span class="text-xs font-bold" style="color: var(--text-main);">${empresa}</span>
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <span class="text-xs font-black uppercase tracking-wide" style="color: var(--text-main);">${empresa}</span>
                     </div>
-                    <div class="relative h-36 w-full flex items-center justify-center">
+                    <div class="relative h-32 w-full flex items-center justify-center">
                         <canvas id="${canvasId}"></canvas>
                     </div>
                     ${summaryHtml}
@@ -623,9 +718,9 @@
                 charts[`dona_${empresa}`] = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: labels,
+                        labels: labelsMarca,
                         datasets: [{
-                            data: values,
+                            data: valuesMarca,
                             backgroundColor: brandColors,
                             borderWidth: 2,
                             borderColor: 'var(--panel-bg)'
@@ -662,7 +757,7 @@
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-500">No se encontraron registros con los filtros seleccionados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">No se encontraron registros con los filtros seleccionados.</td></tr>`;
                 return;
             }
 
@@ -672,6 +767,9 @@
                 if (!grouped[d.empresa][d.vendedor]) grouped[d.empresa][d.vendedor] = [];
                 grouped[d.empresa][d.vendedor].push(d);
             });
+
+            const isDark = document.getElementById('appBody').classList.contains('theme-dark');
+            const yearColor = isDark ? 'var(--table-row-year-dark)' : 'var(--table-row-year-light)';
 
             for (const empresa in grouped) {
                 let totalEmpresa = 0;
@@ -685,13 +783,14 @@
                         totalEmpresa += d.cantidad;
 
                         const tr = document.createElement('tr');
-                        tr.className = 'border-b transition hover:bg-slate-500/10';
+                        tr.className = 'border-b transition hover:bg-slate-500/15';
                         tr.style.borderColor = 'var(--table-border)';
                         tr.innerHTML = `
                             <td class="px-4 py-2.5 font-bold ${index === 0 ? 'text-amber-500 dark:text-amber-400' : 'text-transparent'}">${index === 0 ? empresa : ''}</td>
                             <td class="px-4 py-2.5 font-semibold" style="color: var(--text-main);">${vendedor}</td>
                             <td class="px-4 py-2.5" style="color: var(--text-main);">${d.marca}</td>
-                            <td class="px-4 py-2.5" style="color: var(--text-muted);">${d.modelo}</td>
+                            <td class="px-4 py-2.5 font-normal" style="color: var(--text-muted);">${d.modelo}</td>
+                            <td class="px-4 py-2.5 text-center font-mono font-normal" style="color: ${yearColor};">${d.ano}</td>
                             <td class="px-4 py-2.5 text-center font-black text-emerald-500 dark:text-emerald-400">${d.cantidad}</td>
                         `;
                         tbody.appendChild(tr);
@@ -702,7 +801,7 @@
                     trSub.style.borderColor = 'var(--table-border)';
                     trSub.innerHTML = `
                         <td class="px-4 py-2"></td>
-                        <td class="px-4 py-2 text-xs text-sky-600 dark:text-sky-400" colspan="3">Subtotal Vendedor (${vendedor}):</td>
+                        <td class="px-4 py-2 text-xs text-sky-600 dark:text-sky-400" colspan="4">Subtotal Vendedor (${vendedor}):</td>
                         <td class="px-4 py-2 text-center text-sky-600 dark:text-sky-400 font-bold">${totalVendedor}</td>
                     `;
                     tbody.appendChild(trSub);
@@ -714,7 +813,7 @@
                 trTotal.style.color = '#78350f';
                 trTotal.style.borderColor = 'var(--table-border)';
                 trTotal.innerHTML = `
-                    <td class="px-4 py-3 uppercase" colspan="4">Total Sucursal / Empresa (${empresa}):</td>
+                    <td class="px-4 py-3 uppercase" colspan="5">Total Sucursal / Empresa (${empresa}):</td>
                     <td class="px-4 py-3 text-center text-base font-black">${totalEmpresa}</td>
                 `;
                 tbody.appendChild(trTotal);
@@ -733,6 +832,7 @@
                 Vendedor: d.vendedor,
                 Marca: d.marca,
                 Modelo: d.modelo,
+                Año: d.ano,
                 Cantidad: d.cantidad,
                 'Precio Compra': d.pCompra,
                 Subtotal: d.subtotal,
