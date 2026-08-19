@@ -670,15 +670,15 @@
             const sucursalCostoMap = {};
 
             data.forEach(d => {
-                const s = d.sucursal || 'Sin Sucursal';
+                const s = String(d.sucursal || 'Sin Sucursal').trim();
                 if (!sucursalMap[s]) {
                     sucursalMap[s] = 0;
                     sucursalMontoMap[s] = 0;
                     sucursalCostoMap[s] = 0;
                 }
-                sucursalMap[s] += (d.cantidad || 0);
-                sucursalMontoMap[s] += (d.monto || 0);
-                sucursalCostoMap[s] += (d.costo || 0);
+                sucursalMap[s] += (Number(d.cantidad) || 0);
+                sucursalMontoMap[s] += (Number(d.monto) || 0);
+                sucursalCostoMap[s] += (Number(d.costo) || 0);
             });
 
             const sucLabels = Object.keys(sucursalMap);
@@ -700,7 +700,7 @@
                     const u = sucursalMap[label];
                     const m = sucursalMontoMap[label];
                     const c = sucursalCostoMap[label];
-                    const util = m > 0 ? (((m - c) / m) * 100).toFixed(2) : '0.00';
+                    const util = m !== 0 ? (((m - c) / m) * 100).toFixed(2) : '0.00';
 
                     const card = document.createElement('div');
                     card.className = 'border rounded-xl p-2.5 flex justify-between items-center';
@@ -738,7 +738,7 @@
                             label: function(context) {
                                 const label = context.label || '';
                                 const val = context.raw || 0;
-                                const monto = sucursalMontoMap[label] ? formatCurrency(sucursalMontoMap[label]) : '$0.00';
+                                const monto = sucursalMontoMap[label] !== undefined ? formatCurrency(sucursalMontoMap[label]) : '$0.00';
                                 return ` Cantidad: ${val} ${val === 1 ? 'Venta' : 'Ventas'} | Total: ${monto}`;
                             }
                         }
@@ -781,7 +781,7 @@
 
             const sucursalGroup = {};
             data.forEach(d => {
-                const suc = d.sucursal || 'Sin Sucursal';
+                const suc = String(d.sucursal || 'Sin Sucursal').trim();
                 const tipo = d.tipoVenta || 'Sin Clasificar';
                 const qty = d.cantidad || 0;
                 const amt = d.monto || 0;
@@ -917,7 +917,7 @@
 
             data.forEach(d => {
                 const vendedor = d.vendedor || 'SIN ASESOR';
-                const sucursal = d.sucursal || 'SIN SUCURSAL';
+                const sucursal = String(d.sucursal || 'SIN SUCURSAL').trim();
                 const linea = d.linea || 'GENERAL';
                 const key = `${sucursal}|${vendedor}|${linea}`;
 
