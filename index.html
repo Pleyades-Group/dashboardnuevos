@@ -683,6 +683,7 @@
 
             const sucLabels = Object.keys(sucursalMap);
             const sucUnidades = sucLabels.map(k => sucursalMap[k]);
+            const sucMontos = sucLabels.map(k => sucursalMontoMap[k]);
 
             const sucColors = sucLabels.map(label => {
                 const l = label.toUpperCase();
@@ -693,12 +694,13 @@
 
             document.getElementById('badgeSucursales').textContent = `${sucLabels.length} Agencias`;
 
+            // Renderizado de tarjetas de detalle por Sucursal sincronizadas con la Venta Bruta
             const containerSucCards = document.getElementById('sucursalesDetailCards');
             if (containerSucCards) {
                 containerSucCards.innerHTML = '';
                 sucLabels.forEach(label => {
                     const u = sucursalMap[label];
-                    const m = sucursalMontoMap[label];
+                    const m = sucursalMontoMap[label]; // Este monto ahora coincide exactamente con la Venta Bruta filtrada
                     const c = sucursalCostoMap[label];
                     const util = m > 0 ? (((m - c) / m) * 100).toFixed(2) : '0.00';
 
@@ -709,10 +711,10 @@
                     card.innerHTML = `
                         <div>
                             <p class="text-[11px] font-bold" style="color: var(--text-main);">${label}</p>
-                            <p class="text-[10px]" style="color: var(--text-muted);">Venta: <span class="font-mono" style="color: var(--text-main);">${formatCurrency(m)}</span></p>
+                            <p class="text-[10px]" style="color: var(--text-muted);">Venta Bruta: <span class="font-mono font-bold" style="color: var(--text-main);">${formatCurrency(m)}</span></p>
                         </div>
                         <div class="text-right">
-                            <span class="text-xs font-black text-sky-400">${u}</span>
+                            <span class="text-xs font-black text-sky-400">${u} Unidades</span>
                             <p class="text-[10px] text-amber-400 font-bold">${util}% Ut.</p>
                         </div>
                     `;
@@ -720,10 +722,11 @@
                 });
             }
 
+            // Actualización de la gráfica para reflejar consistencia en etiquetas y montos
             createOrUpdateChart('chartSucursales', 'bar', {
                 labels: sucLabels,
                 datasets: [{
-                    label: 'Unidades Netas',
+                    label: 'Venta Bruta / Unidades',
                     data: sucUnidades,
                     backgroundColor: sucColors,
                     borderRadius: 8,
@@ -738,8 +741,8 @@
                             label: function(context) {
                                 const label = context.label || '';
                                 const val = context.raw || 0;
-                                const monto = sucursalMontoMap[label] ? formatCurrency(sucursalMontoMap[label]) : '$0.00';
-                                return ` Cantidad: ${val} ${val === 1 ? 'Venta' : 'Ventas'} | Total: ${monto}`;
+                                const montoExacto = sucursalMontoMap[label] ? formatCurrency(sucursalMontoMap[label]) : '$0.00';
+                                return ` Unidades: ${val} | Venta Bruta: ${montoExacto}`;
                             }
                         }
                     },
@@ -754,14 +757,18 @@
                         borderWidth: 1,
                         borderRadius: 6,
                         padding: { top: 4, bottom: 4, left: 8, right: 8 },
-                        font: { weight: 'bold', size: 12 },
-                        formatter: (v) => `${v} ${v === 1 ? 'Venta' : 'Ventas'}`
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (v, ctx) => {
+                            const label = ctx.chart.data.labels[ctx.dataIndex];
+                            const montoVal = sucursalMontoMap[label] || 0;
+                            return `${v} un. (${formatCurrency(montoVal)})`;
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grace: '20%',
+                        grace: '25%',
                         ticks: { color: '#94a3b8', stepSize: 1 },
                         grid: { color: 'rgba(255,255,255,0.05)' }
                     },
