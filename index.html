@@ -19,56 +19,19 @@
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-main, #0b0f19);
-            color: var(--text-main, #f1f5f9);
-            transition: background-color 0.3s ease, color 0.3s ease;
+            background-color: #0b0f19;
+            color: #f1f5f9;
         }
-
-        /* Variables Tema Oscuro (Por Defecto) */
-        body.theme-dark {
-            --bg-main: #0b0f19;
-            --text-main: #f1f5f9;
-            --panel-bg: rgba(15, 23, 42, 0.75);
-            --panel-border: rgba(255, 255, 255, 0.08);
-            --card-bg: rgba(30, 41, 59, 0.6);
-            --card-border: rgba(255, 255, 255, 0.05);
-            --header-bg: rgba(15, 23, 42, 0.8);
-            --header-border: #1e293b;
-            --input-bg: #0f172a;
-            --input-border: #334155;
-            --text-muted: #94a3b8;
-            --table-header: rgba(15, 23, 42, 0.9);
-            --table-border: #1e293b;
-        }
-
-        /* Variables Tema Claro */
-        body.theme-light {
-            --bg-main: #f1f5f9;
-            --text-main: #0f172a;
-            --panel-bg: rgba(255, 255, 255, 0.85);
-            --panel-border: rgba(0, 0, 0, 0.08);
-            --card-bg: rgba(255, 255, 255, 0.9);
-            --card-border: rgba(0, 0, 0, 0.06);
-            --header-bg: rgba(255, 255, 255, 0.9);
-            --header-border: #e2e8f0;
-            --input-bg: #ffffff;
-            --input-border: #cbd5e1;
-            --text-muted: #64748b;
-            --table-header: rgba(241, 245, 249, 0.9);
-            --table-border: #e2e8f0;
-        }
-
         .glass-panel {
-            background: var(--panel-bg);
+            background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(12px);
-            border: 1px solid var(--panel-border);
-            transition: background 0.3s ease, border 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
         .glass-card {
-            background: var(--card-bg);
+            background: rgba(30, 41, 59, 0.6);
             backdrop-filter: blur(8px);
-            border: 1px solid var(--card-border);
-            transition: transform 0.2s ease, border-color 0.2s ease, background 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
         .glass-card:hover {
             transform: translateY(-2px);
@@ -80,10 +43,10 @@
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: var(--input-bg);
+            background: #0f172a;
         }
         ::-webkit-scrollbar-thumb {
-            background: var(--input-border);
+            background: #334155;
             border-radius: 3px;
         }
         ::-webkit-scrollbar-thumb:hover {
@@ -91,32 +54,26 @@
         }
     </style>
 </head>
-<body class="min-h-screen pb-12 theme-dark" id="appBody">
+<body class="min-h-screen pb-12">
 
     <!-- ENCABEZADO -->
-    <header class="sticky top-0 z-40 border-b bg-slate-950/80 backdrop-blur-md px-4 lg:px-8 py-3 transition-colors duration-300" id="mainHeader" style="border-color: var(--header-border); background-color: var(--header-bg);">
+    <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-4 lg:px-8 py-3">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
                     <i class="fa-solid fa-car-side text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight flex items-center gap-2" style="color: var(--text-main);">
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
                         SUBARU <span class="text-sky-400 font-medium text-sm px-2 py-0.5 rounded-full bg-sky-950/80 border border-sky-800/50">Nuevos</span>
                     </h1>
-                    <p class="text-xs" style="color: var(--text-muted);">Dashboard Ejecutivo de Ventas y Unidades Netas</p>
+                    <p class="text-xs text-slate-400">Dashboard Ejecutivo de Ventas y Unidades Netas</p>
                 </div>
             </div>
 
-            <!-- Botones de Acción y Selector de Tema -->
+            <!-- Botones de Acción -->
             <div class="flex flex-wrap items-center gap-3">
-                <!-- Botón Cambio de Tema (Claro / Oscuro) -->
-                <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm border border-slate-700/60 bg-slate-800/90 text-slate-200 hover:bg-slate-700">
-                    <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
-                    <span id="themeText">Tema Claro</span>
-                </button>
-
-                <label class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700/60 bg-slate-900/90 text-slate-300 hover:text-white transition">
+                <label class="flex items-center gap-2 bg-slate-900/90 border border-slate-700/60 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-slate-300 hover:text-white transition">
                     <input type="checkbox" id="chkExcludeIntercambio" checked class="w-4 h-4 rounded border-slate-700 text-sky-500 focus:ring-sky-500/30 bg-slate-800">
                     <span>Excluir Intercambios</span>
                 </label>
@@ -146,28 +103,28 @@
         </div>
 
         <!-- FILTROS EN LA PARTE SUPERIOR -->
-        <section class="glass-panel rounded-2xl p-4 shadow-xl">
+        <section class="glass-panel rounded-2xl p-4 border border-slate-800 shadow-xl">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <!-- Filtro Sucursal -->
                 <div>
-                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Sucursal</label>
-                    <select id="selSucursal" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Sucursal</label>
+                    <select id="selSucursal" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="TODOS">Todas las sucursales</option>
                     </select>
                 </div>
 
                 <!-- Filtro Tipo de Venta -->
                 <div>
-                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Tipo de Venta</label>
-                    <select id="selTipoVenta" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Venta</label>
+                    <select id="selTipoVenta" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="TODOS">Todos los canales</option>
                     </select>
                 </div>
 
                 <!-- Filtro Vendedor -->
                 <div>
-                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Asesor de Ventas</label>
-                    <select id="selVendedor" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Asesor de Ventas</label>
+                    <select id="selVendedor" class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
                         <option value="TODOS">Todos los vendedores</option>
                     </select>
                 </div>
@@ -177,51 +134,51 @@
         <!-- FICHAS KPI -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Unidades Vendidas -->
-            <div class="glass-card rounded-2xl p-4">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Unidades Vendidas</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Unidades Vendidas</span>
                     <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-car-side"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiUnidades">0</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);">Ventas de Unidades</p>
+                <div class="text-2xl font-black text-white" id="kpiUnidades">0</div>
+                <p class="text-[11px] text-slate-400 mt-1">Ventas de Unidades</p>
             </div>
 
             <!-- Venta Bruta -->
-            <div class="glass-card rounded-2xl p-4">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Venta Bruta</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Venta Bruta</span>
                     <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-sack-dollar"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiVentaBruta">$0.00</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);">Monto total antes de impuestos (Col. E)</p>
+                <div class="text-2xl font-black text-white" id="kpiVentaBruta">$0.00</div>
+                <p class="text-[11px] text-slate-400 mt-1">Monto de venta antes de Impuestos - ISAN</p>
             </div>
 
             <!-- Costo Total -->
-            <div class="glass-card rounded-2xl p-4">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Costo Total</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Costo Total</span>
                     <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-file-invoice-dollar"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiCosto">$0.00</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);">Costo total de adquisición (Col. D)</p>
+                <div class="text-2xl font-black text-white" id="kpiCosto">$0.00</div>
+                <p class="text-[11px] text-slate-400 mt-1">Costo total de adquisición</p>
             </div>
 
             <!-- % Utilidad Promedio -->
-            <div class="glass-card rounded-2xl p-4">
+            <div class="glass-card rounded-2xl p-4 border border-slate-800">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">% Utilidad Promedio</span>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">% Utilidad Promedio</span>
                     <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-chart-line"></i>
                     </div>
                 </div>
-                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiUtilidad">0.00%</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);">(Venta Bruta - Costo) / Venta Bruta</p>
+                <div class="text-2xl font-black text-white" id="kpiUtilidad">0.00%</div>
+                <p class="text-[11px] text-slate-400 mt-1">(Venta Bruta - Costo) / Venta Bruta</p>
             </div>
         </section>
 
@@ -229,16 +186,16 @@
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <!-- Chart 1: Performance por Sucursal -->
-            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <div>
-                            <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                                 <i class="fa-solid fa-store text-sky-400"></i> Performance por Sucursal
                             </h3>
-                            <p class="text-xs" style="color: var(--text-muted);">Cantidad de unidades netas por agencia</p>
+                            <p class="text-xs text-slate-400">Cantidad de unidades netas por agencia</p>
                         </div>
-                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold" style="background-color: var(--input-bg); color: var(--text-main);" id="badgeSucursales">
+                        <span class="bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold" id="badgeSucursales">
                             0 Agencias
                         </span>
                     </div>
@@ -248,19 +205,19 @@
                 </div>
 
                 <!-- Tarjetas de detalle por Sucursal -->
-                <div id="sucursalesDetailCards" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 pt-3 border-t" style="border-color: var(--table-border);">
+                <div id="sucursalesDetailCards" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800/80">
                 </div>
             </div>
 
             <!-- Chart 2: Mezcla por Tipo de Venta por Sucursal -->
-            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+            <div class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <div>
-                            <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                                 <i class="fa-solid fa-chart-pie text-indigo-400"></i> Mezcla por Tipo de Venta por Sucursal
                             </h3>
-                            <p class="text-xs" style="color: var(--text-muted);">Distribución de canales de venta por cada agencia</p>
+                            <p class="text-xs text-slate-400">Distribución de canales de venta por cada agencia</p>
                         </div>
                     </div>
                     <div id="containerTipoVentaBySucursal" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -270,22 +227,22 @@
         </section>
 
         <!-- TABLA DE DETALLE OPERATIVO -->
-        <section class="glass-panel rounded-2xl p-5 shadow-xl">
+        <section class="glass-panel rounded-2xl p-5 border border-slate-800 shadow-xl">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
-                    <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                         <i class="fa-solid fa-user-tie text-sky-400"></i> Detalle Operativo de Venta
                     </h3>
-                    <p class="text-xs" style="color: var(--text-muted);">Resumen consolidado por Vendedor, Sucursal, Línea de Vehículo y Cantidad</p>
+                    <p class="text-xs text-slate-400">Resumen consolidado por Vendedor, Sucursal, Línea de Vehículo y Cantidad</p>
                 </div>
-                <span class="text-xs px-3 py-1.5 rounded-lg" style="background-color: var(--input-bg); color: var(--text-muted); border: 1px solid var(--input-border);" id="tableRecordCount">
+                <span class="text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg" id="tableRecordCount">
                     Mostrando 0 registros
                 </span>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
-                <table class="w-full text-left text-xs" style="color: var(--text-main);">
-                    <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
+            <div class="overflow-x-auto rounded-xl border border-slate-800">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900/90 text-slate-400 uppercase font-bold border-b border-slate-800">
                         <tr>
                             <th class="px-4 py-3">Vendedor / Asesor</th>
                             <th class="px-4 py-3">Sucursal</th>
@@ -293,7 +250,7 @@
                             <th class="px-4 py-3 text-center">Cantidad Vendida</th>
                         </tr>
                     </thead>
-                    <tbody id="tblBody" class="divide-y font-medium" style="border-color: var(--table-border);">
+                    <tbody id="tblBody" class="divide-y divide-slate-800/60 font-medium">
                     </tbody>
                 </table>
             </div>
@@ -302,7 +259,7 @@
 
     <!-- Modal para Cargar Archivo Excel -->
     <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
             <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -310,13 +267,13 @@
                 <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl mx-auto mb-3 border border-emerald-500/20">
                     <i class="fa-solid fa-file-excel"></i>
                 </div>
-                <h3 class="text-lg font-bold" style="color: var(--text-main);">Cargar Nuevo Archivo</h3>
-                <p class="text-xs mt-1" style="color: var(--text-muted);">Selecciona el archivo Excel <code>Resumen Venta Nuevos Subaru.xlsx</code></p>
+                <h3 class="text-lg font-bold text-white">Cargar Nuevo Archivo</h3>
+                <p class="text-xs text-slate-400 mt-1">Selecciona el archivo Excel <code>Resumen Venta Nuevos Subaru.xlsx</code></p>
             </div>
 
-            <div class="border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer" style="border-color: var(--input-border); background-color: var(--input-bg);" id="dropZone">
+            <div class="border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl p-8 text-center bg-slate-900/50 transition cursor-pointer" id="dropZone">
                 <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-500 mb-2"></i>
-                <p class="text-xs font-semibold" style="color: var(--text-main);">Haz clic o arrastra aquí tu archivo Excel</p>
+                <p class="text-xs font-semibold text-slate-300">Haz clic o arrastra aquí tu archivo Excel</p>
                 <p class="text-[10px] text-slate-500 mt-1">Soporta archivos .xlsx / .xls</p>
                 <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
             </div>
@@ -378,122 +335,71 @@
         let currentData = [...initialRawData];
         let charts = {};
 
+        // 🔗 URL PUBLICA DE GOOGLE SHEETS
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpNSdU1ziEql8lJe9imEiYCg2NU3AfXqiR1f3YPjzILYjPklBjDoGYQv57mlm_Dg/pub?gid=1793184638&single=true&output=csv';
                                        
         document.addEventListener('DOMContentLoaded', () => {
-            initThemeToggle();
             cargarDatosDesdeGoogleSheets();
         });
-
-        // 🌗 Lógica para Cambio de Tema (Claro / Oscuro)
-        function initThemeToggle() {
-            const btnToggle = document.getElementById('btnToggleTheme');
-            const appBody = document.getElementById('appBody');
-            const themeIcon = document.getElementById('themeIcon');
-            const themeText = document.getElementById('themeText');
-
-            // Leer preferencia guardada previamente
-            const savedTheme = localStorage.getItem('subaru_dashboard_theme') || 'theme-dark';
-            appBody.className = `min-h-screen pb-12 ${savedTheme}`;
-            updateThemeButtonUI(savedTheme);
-
-            btnToggle.onclick = () => {
-                const currentTheme = appBody.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';
-                const newTheme = currentTheme === 'theme-dark' ? 'theme-light' : 'theme-dark';
-                
-                appBody.className = `min-h-screen pb-12 ${newTheme}`;
-                localStorage.setItem('subaru_dashboard_theme', newTheme);
-                updateThemeButtonUI(newTheme);
-
-                // Redibujar gráficos para actualizar colores de texto si fuera necesario
-                updateDashboard();
-            };
-        }
-
-        function updateThemeButtonUI(theme) {
-            const themeIcon = document.getElementById('themeIcon');
-            const themeText = document.getElementById('themeText');
-            if (theme === 'theme-light') {
-                themeIcon.className = 'fa-solid fa-moon text-indigo-600';
-                themeText.textContent = 'Tema Oscuro';
-            } else {
-                themeIcon.className = 'fa-solid fa-sun text-amber-400';
-                themeText.textContent = 'Tema Claro';
-            }
-        }
 
         async function cargarDatosDesdeGoogleSheets() {
             try {
                 const antiCacheUrl = `${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}`;
+                
                 const response = await fetch(antiCacheUrl, { cache: 'no-store' });
                 if (!response.ok) throw new Error('No se pudo conectar con Google Sheets');
                 
                 const csvText = await response.text();
+                
                 const workbook = XLSX.read(csvText, { type: 'string' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
+                
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
-                if (json.length < 2) throw new Error('El archivo está vacío');
+                if (json.length < 2) {
+                    throw new Error('El archivo está vacío');
+                }
 
-                const headers = json[0].map(h => String(h || '').trim().toLowerCase());
+                const headers = json[0].map(h => String(h || '').trim());
                 
-                let idxCosto = headers.findIndex(h => h.includes('imp.costo') || h === 'costo' || h === 'p_compra');
-                let idxVentaBruta = headers.findIndex(h => h.includes('venta bruta') || h === 'venta_bruta' || h === 'monto');
-                let idxSucursal = headers.findIndex(h => h.includes('sucursal'));
-                let idxLinea = headers.findIndex(h => h.includes('linea') || h.includes('línea'));
-                let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
-                let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor'));
-                let idxTipoVenta = headers.findIndex(h => h.includes('tipo venta') || h.includes('tipo_venta'));
-
-                if (idxCosto === -1) idxCosto = 3;         // Columna D
-                if (idxVentaBruta === -1) idxVentaBruta = 4; // Columna E
-                if (idxSucursal === -1) idxSucursal = 9;     // Columna J
-                if (idxLinea === -1) idxLinea = 10;          // Columna K
-                if (idxCantidad === -1) idxCantidad = 12;    // Columna M
-                if (idxVendedor === -1) idxVendedor = 13;    // Columna N
-                if (idxTipoVenta === -1) idxTipoVenta = 15;  // Columna P
+                const idxF = 5; // Columna F (Costo)
+                const idxG = 6; // Columna G (Venta Bruta)
 
                 const parsedData = [];
                 for (let i = 1; i < json.length; i++) {
                     const r = json[i];
                     if (!r || r.length === 0) continue;
 
-                    const rawCosto = r[idxCosto] ?? 0;
-                    const rawMonto = r[idxVentaBruta] ?? 0;
-                    const rawSucursal = r[idxSucursal] ?? '';
-                    const rawLinea = r[idxLinea] ?? '';
-                    const rawCantidad = r[idxCantidad] ?? 1;
-                    const rawVendedor = r[idxVendedor] ?? '';
-                    const rawTipoVenta = r[idxTipoVenta] ?? '';
+                    const rawCosto = r[idxF] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
+                    const rawMonto = r[idxG] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
 
                     const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                     const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
-                    const qty = Number(String(rawCantidad).replace(/[^0-9.-]+/g,"")) || 1;
 
                     const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
 
                     parsedData.push({
-                        factura: String(objRaw.Factura || r[0] || ''),
-                        facturaRef: String(objRaw['Fact.Cancelada'] || ''),
-                        referencia: String(objRaw.Referenci || ''),
+                        factura: String(objRaw.Factura || objRaw.factura || r[0] || ''),
+                        facturaRef: String(objRaw['Fact.Cancelada'] || objRaw.facturaRef || ''),
+                        referencia: String(objRaw.Referenci || objRaw.referencia || ''),
                         fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
-                        modelo: String(objRaw.Modelo || ''),
-                        cliente: String(objRaw.Cliente || ''),
-                        sucursal: String(objRaw.Sucursal || rawSucursal || '').trim(),
-                        linea: String(objRaw.Linea || rawLinea || '').trim(),
-                        cantidad: qty,
+                        modelo: String(objRaw.Modelo || objRaw.modelo || ''),
+                        cliente: String(objRaw.Cliente || objRaw.cliente || ''),
+                        sucursal: String(objRaw.Sucursal || objRaw.sucursal || ''),
+                        linea: String(objRaw.Linea || objRaw.linea || ''),
+                        cantidad: Number(objRaw.Cantidad || objRaw.cantidad || 1),
                         monto: vb,
                         costo: cst,
-                        subtotal: Number(objRaw.Subtotal || vb),
-                        iva: Number(objRaw.Iva || 0),
-                        total: Number(objRaw.Total || vb),
-                        vendedor: String(objRaw.Vendedor || rawVendedor || '').trim(),
-                        clasificacion: String(objRaw['Clasif.'] || 'Venta'),
-                        tipoVenta: String(objRaw['Tipo Venta'] || rawTipoVenta || '').trim(),
-                        utilidad: Number(objRaw['%Utilidad'] || 0),
-                        isan: Number(objRaw.ISAN || 0),
-                        tvDescripcion: String(objRaw['TV Descripcion'] || '')
+                        subtotal: Number(objRaw.Subtotal || objRaw.subtotal || vb),
+                        iva: Number(objRaw.Iva || objRaw.iva || 0),
+                        total: Number(objRaw.Total || objRaw.total || vb),
+                        vendedor: String(objRaw.Vendedor || objRaw.vendedor || ''),
+                        clasificacion: String(objRaw['Clasif.'] || objRaw.clasificacion || 'Venta'),
+                        tipoVenta: String(objRaw['Tipo Venta'] || objRaw.tipoVenta || ''),
+                        utilidad: Number(objRaw['%Utilidad'] || objRaw.utilidad || 0),
+                        isan: Number(objRaw.ISAN || objRaw.isan || 0),
+                        tvDescripcion: String(objRaw['TV Descripcion'] || objRaw.tvDescripcion || '')
                     });
                 }
 
@@ -703,13 +609,11 @@
                     const util = m > 0 ? (((m - c) / m) * 100).toFixed(2) : '0.00';
 
                     const card = document.createElement('div');
-                    card.className = 'border rounded-xl p-2.5 flex justify-between items-center';
-                    card.style.backgroundColor = 'var(--input-bg)';
-                    card.style.borderColor = 'var(--table-border)';
+                    card.className = 'bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 flex justify-between items-center';
                     card.innerHTML = `
                         <div>
-                            <p class="text-[11px] font-bold" style="color: var(--text-main);">${label}</p>
-                            <p class="text-[10px]" style="color: var(--text-muted);">Venta: <span class="font-mono" style="color: var(--text-main);">${formatCurrency(m)}</span></p>
+                            <p class="text-[11px] font-bold text-slate-200">${label}</p>
+                            <p class="text-[10px] text-slate-400">Venta: <span class="text-slate-300 font-mono">${formatCurrency(m)}</span></p>
                         </div>
                         <div class="text-right">
                             <span class="text-xs font-black text-sky-400">${u}</span>
@@ -753,7 +657,12 @@
                         borderColor: 'rgba(56, 189, 248, 0.5)',
                         borderWidth: 1,
                         borderRadius: 6,
-                        padding: { top: 4, bottom: 4, left: 8, right: 8 },
+                        padding: {
+                            top: 4,
+                            bottom: 4,
+                            left: 8,
+                            right: 8
+                        },
                         font: { weight: 'bold', size: 12 },
                         formatter: (v) => `${v} ${v === 1 ? 'Venta' : 'Ventas'}`
                     }
@@ -815,39 +724,20 @@
                 const sucData = sucursalGroup[suc];
                 const chartId = `chartTipoVenta_suc_${idx}`;
 
-                const labels = Object.keys(sucData.tipos);
-                const values = labels.map(l => sucData.tipos[l]);
-
-                let summaryHtml = '<div class="w-full mt-3 pt-3 border-t" style="border-color: var(--table-border); space-y: 1.5px;">';
-                labels.forEach((tipoLabel, tIdx) => {
-                    const cant = sucData.tipos[tipoLabel];
-                    const colorDot = palette[tIdx % palette.length];
-                    summaryHtml += `
-                        <div class="flex justify-between items-center text-[11px] py-0.5">
-                            <span class="flex items-center gap-2" style="color: var(--text-main);">
-                                <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${colorDot};"></span>
-                                ${tipoLabel}
-                            </span>
-                            <span class="font-bold text-sky-400 font-mono">${cant} ${cant === 1 ? 'Venta' : 'Ventas'}</span>
-                        </div>
-                    `;
-                });
-                summaryHtml += '</div>';
-
                 const wrapper = document.createElement('div');
-                wrapper.className = 'border rounded-xl p-3 flex flex-col items-center justify-between';
-                wrapper.style.backgroundColor = 'var(--input-bg)';
-                wrapper.style.borderColor = 'var(--table-border)';
+                wrapper.className = 'bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex flex-col items-center justify-between';
                 wrapper.innerHTML = `
-                    <div class="w-full flex justify-between items-center mb-1">
-                        <span class="text-xs font-bold" style="color: var(--text-main);">${suc}</span>
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-slate-200">${suc}</span>
                     </div>
-                    <div class="relative h-36 w-full flex items-center justify-center">
+                    <div class="relative h-48 w-full flex items-center justify-center">
                         <canvas id="${chartId}"></canvas>
                     </div>
-                    ${summaryHtml}
                 `;
                 container.appendChild(wrapper);
+
+                const labels = Object.keys(sucData.tipos);
+                const values = labels.map(l => sucData.tipos[l]);
 
                 createOrUpdateChart(chartId, 'doughnut', {
                     labels: labels,
@@ -855,11 +745,19 @@
                         data: values,
                         backgroundColor: palette.slice(0, labels.length),
                         borderWidth: 2,
-                        borderColor: 'var(--panel-bg)'
+                        borderColor: '#0f172a'
                     }]
                 }, {
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: { size: 10, weight: '600' },
+                                boxWidth: 10,
+                                padding: 8
+                            }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -874,7 +772,10 @@
                             display: true,
                             color: '#ffffff',
                             font: { weight: 'bold', size: 11 },
-                            formatter: (value) => value > 0 ? value : ''
+                            formatter: (val) => {
+                                if (val <= 0) return '';
+                                return `${val}`;
+                            }
                         }
                     }
                 });
@@ -892,10 +793,17 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: {
-                    padding: { top: 24, right: 12, left: 12, bottom: 8 }
+                    padding: {
+                        top: 24,
+                        right: 12,
+                        left: 12,
+                        bottom: 8
+                    }
                 },
                 plugins: {
-                    datalabels: { display: true },
+                    datalabels: {
+                        display: true
+                    },
                     ...customOptions.plugins
                 },
                 ...customOptions
@@ -979,16 +887,15 @@
                 Object.entries(sucData.vendedores).forEach(([vendedorName, vGroup]) => {
                     vGroup.items.forEach(r => {
                         const tr = document.createElement('tr');
-                        tr.className = 'transition border-b';
-                        tr.style.borderColor = 'var(--table-border)';
+                        tr.className = 'hover:bg-slate-800/40 transition border-b border-slate-800/40';
 
                         tr.innerHTML = `
-                            <td class="px-4 py-3 font-semibold flex items-center gap-2" style="color: var(--text-main);">
+                            <td class="px-4 py-3 font-semibold text-slate-100 flex items-center gap-2">
                                 <i class="fa-solid fa-user-circle text-sky-400 text-sm"></i>
                                 <span>${r.vendedor}</span>
                             </td>
-                            <td class="px-4 py-3 font-bold" style="color: var(--text-main);">${r.sucursal}</td>
-                            <td class="px-4 py-3 text-sky-400">${r.linea}</td>
+                            <td class="px-4 py-3 text-slate-300 font-bold">${r.sucursal}</td>
+                            <td class="px-4 py-3 text-sky-300">${r.linea}</td>
                             <td class="px-4 py-3 text-center font-black text-sm ${r.cantidadTotal < 0 ? 'text-rose-400' : 'text-emerald-400'}">
                                 ${r.cantidadTotal}
                             </td>
@@ -997,12 +904,10 @@
                     });
 
                     const trSub = document.createElement('tr');
-                    trSub.className = 'border-b font-bold';
-                    trSub.style.backgroundColor = 'var(--input-bg)';
-                    trSub.style.borderColor = 'var(--table-border)';
+                    trSub.className = 'bg-slate-900/60 border-b border-slate-800/80 font-bold';
                     trSub.innerHTML = `
-                        <td colspan="3" class="px-4 py-2 text-right text-xs" style="color: var(--text-muted);">
-                            Subtotal Vendedor (<span class="text-sky-400">${vendedorName}</span>):
+                        <td colspan="3" class="px-4 py-2 text-right text-slate-400 text-xs">
+                            Subtotal Vendedor (<span class="text-sky-300">${vendedorName}</span>):
                         </td>
                         <td class="px-4 py-2 text-center text-xs font-black text-amber-400">
                             ${vGroup.totalVendedorQty}
@@ -1012,12 +917,10 @@
                 });
 
                 const trSucTotal = document.createElement('tr');
-                trSucTotal.className = 'border-b-2 font-black';
-                trSucTotal.style.backgroundColor = 'rgba(56, 189, 248, 0.08)';
-                trSucTotal.style.borderColor = 'var(--table-border)';
+                trSucTotal.className = 'bg-sky-950/40 border-b-2 border-sky-800/60 font-black';
                 trSucTotal.innerHTML = `
-                    <td colspan="3" class="px-4 py-2.5 text-right text-xs uppercase tracking-wider" style="color: var(--text-main);">
-                        Total Sucursal <span class="text-sky-400">${sucName}</span>:
+                    <td colspan="3" class="px-4 py-2.5 text-right text-sky-200 text-xs uppercase tracking-wider">
+                        Total Sucursal <span class="text-white">${sucName}</span>:
                     </td>
                     <td class="px-4 py-2.5 text-center text-sm font-black text-sky-400">
                         ${sucData.totalSucursalQty}
@@ -1036,46 +939,26 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
 
-                    const sheetName = workbook.SheetNames.includes('U731') ? 'U731' : workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
+                    if (!workbook.SheetNames.includes('U731')) {
+                        alert('El archivo no contiene la hoja requerida: U731');
+                        return;
+                    }
+
+                    const worksheet = workbook.Sheets['U731'];
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
                     if (json.length < 2) return;
-
-                    const headers = json[0].map(h => String(h || '').trim().toLowerCase());
-                    let idxCosto = headers.findIndex(h => h.includes('imp.costo') || h === 'costo' || h === 'p_compra');
-                    let idxVentaBruta = headers.findIndex(h => h.includes('venta bruta') || h === 'venta_bruta' || h === 'monto');
-                    let idxSucursal = headers.findIndex(h => h.includes('sucursal'));
-                    let idxLinea = headers.findIndex(h => h.includes('linea') || h.includes('línea'));
-                    let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
-                    let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor'));
-                    let idxTipoVenta = headers.findIndex(h => h.includes('tipo venta') || h === 'tipo venta');
-
-                    if (idxCosto === -1) idxCosto = 3;
-                    if (idxVentaBruta === -1) idxVentaBruta = 4;
-                    if (idxSucursal === -1) idxSucursal = 9;
-                    if (idxLinea === -1) idxLinea = 10;
-                    if (idxCantidad === -1) idxCantidad = 12;
-                    if (idxVendedor === -1) idxVendedor = 13;
-                    if (idxTipoVenta === -1) idxTipoVenta = 15;
 
                     const parsedData = [];
                     for (let i = 1; i < json.length; i++) {
                         const r = json[i];
                         if (!r || r.length === 0) continue;
 
-                        const rawCosto = r[idxCosto] ?? 0;
-                        const rawMonto = r[idxVentaBruta] ?? 0;
-                        const rawSucursal = r[idxSucursal] ?? '';
-                        const rawLinea = r[idxLinea] ?? '';
-                        const rawCantidad = r[idxCantidad] ?? 1;
-                        const rawVendedor = r[idxVendedor] ?? '';
-                        const rawTipoVenta = r[idxTipoVenta] ?? '';
+                        const rawCosto = r[5] ?? 0;
+                        const rawMonto = r[6] ?? 0;
 
                         const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                         const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
-                        const qty = Number(String(rawCantidad).replace(/[^0-9.-]+/g,"")) || 1;
-                        
                         const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
 
                         parsedData.push({
@@ -1085,17 +968,17 @@
                             fecha: objRaw.Fecha ? new Date(objRaw.Fecha).toISOString().split('T')[0] : '',
                             modelo: String(objRaw.Modelo || ''),
                             cliente: String(objRaw.Cliente || ''),
-                            sucursal: String(objRaw.Sucursal || rawSucursal || '').trim(),
-                            linea: String(objRaw.Linea || rawLinea || '').trim(),
-                            cantidad: qty,
+                            sucursal: String(objRaw.Sucursal || ''),
+                            linea: String(objRaw.Linea || ''),
+                            cantidad: Number(objRaw.Cantidad || 1),
                             monto: vb,
                             costo: cst,
                             subtotal: Number(objRaw.Subtotal || vb),
                             iva: Number(objRaw.Iva || 0),
                             total: Number(objRaw.Total || vb),
-                            vendedor: String(objRaw.Vendedor || rawVendedor || '').trim(),
+                            vendedor: String(objRaw.Vendedor || ''),
                             clasificacion: String(objRaw['Clasif.'] || 'Venta'),
-                            tipoVenta: String(objRaw['Tipo Venta'] || rawTipoVenta || '').trim(),
+                            tipoVenta: String(objRaw['Tipo Venta'] || ''),
                             utilidad: Number(objRaw['%Utilidad'] || 0),
                             isan: Number(objRaw.ISAN || 0),
                             tvDescripcion: String(objRaw['TV Descripcion'] || '')
@@ -1108,10 +991,11 @@
                         updateDashboard();
                         document.getElementById('mdlUpload').classList.add('hidden');
                     } else {
-                        console.warn('No se encontraron filas con datos válidos.');
+                        alert('No se encontraron filas con número de factura válido.');
                     }
                 } catch (err) {
                     console.error('Error procesando Excel:', err);
+                    alert('Error al leer el archivo Excel.');
                 }
             };
             reader.readAsArrayBuffer(file);
