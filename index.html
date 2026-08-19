@@ -154,7 +154,7 @@
                     </div>
                 </div>
                 <div class="text-2xl font-black text-white" id="kpiVentaBruta">$0.00</div>
-                <p class="text-[11px] text-slate-400 mt-1">Monto total antes de impuestos</p>
+                <p class="text-[11px] text-slate-400 mt-1">Monto de venta antes de Impuestos - ISAN</p>
             </div>
 
             <!-- Costo Total -->
@@ -335,18 +335,15 @@
         let currentData = [...initialRawData];
         let charts = {};
 
-        // 🔗 URL PUBLICA DE GOOGLE SHEETS (Asegúrate de colocar tu enlace aquí)
+        // 🔗 URL PUBLICA DE GOOGLE SHEETS
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpNSdU1ziEql8lJe9imEiYCg2NU3AfXqiR1f3YPjzILYjPklBjDoGYQv57mlm_Dg/pub?gid=1793184638&single=true&output=csv';
                                        
         document.addEventListener('DOMContentLoaded', () => {
-            // Sincronización automática con anulación de caché del navegador al abrir
             cargarDatosDesdeGoogleSheets();
         });
 
-        // Función optimizada con Anti-Caché incorporado
         async function cargarDatosDesdeGoogleSheets() {
             try {
-                // Añadimos un parámetro de tiempo aleatorio (timestamp) para forzar al navegador a descargar datos frescos y no usar caché
                 const antiCacheUrl = `${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}`;
                 
                 const response = await fetch(antiCacheUrl, { cache: 'no-store' });
@@ -354,37 +351,33 @@
                 
                 const csvText = await response.text();
                 
-                // Parsear CSV usando SheetJS con header: 1 para poder acceder exactamente a las columnas por índice (Columna F = index 5, Columna G = index 6)
                 const workbook = XLSX.read(csvText, { type: 'string' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Obtenemos los datos con cabeceras estándar
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
                 if (json.length < 2) {
                     throw new Error('El archivo está vacío');
                 }
 
-                const headers = json[0].map(h => String(h || '').trim());
-                
-                // Detectar índices de columna o usar por defecto F (índice 5) y G (índice 6)
-                const idxF = 5; // Columna F (Costo)
-                const idxG = 6; // Columna G (Venta Bruta)
+                // Índices corregidos basados en base 0:
+                // Columna D = índice 3 (Costo)
+                // Columna E = índice 4 (Venta Bruta)
+                const idxCosto = 3; 
+                const idxVentaBruta = 4; 
 
                 const parsedData = [];
                 for (let i = 1; i < json.length; i++) {
                     const r = json[i];
                     if (!r || r.length === 0) continue;
 
-                    // Mapeo por nombres de columna comunes o por índice exacto solicitado (F y G)
-                    const rawCosto = r[idxF] ?? r[5] ?? r['Imp.costo'] ?? r['Costo'] ?? 0;
-                    const rawMonto = r[idxG] ?? r[6] ?? r['Venta Bruta'] ?? r['venta bruta'] ?? 0;
+                    const rawCosto = r[idxCosto] ?? r[3] ?? 0;
+                    const rawMonto = r[idxVentaBruta] ?? r[4] ?? 0;
 
                     const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                     const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
 
-                    // Intentar recuperar los demás campos buscando por nombre en el objeto original o por índice si existe
                     const objRaw = XLSX.utils.sheet_to_json(worksheet)[i - 1] || {};
 
                     parsedData.push({
@@ -417,7 +410,6 @@
             } catch (err) {
                 console.warn('Aviso: Usando datos locales de respaldo por error de red o enlace.', err);
             } finally {
-                // Inicializar interfaz y gráficas con los datos frescos obtenidos
                 initDropdowns();
                 updateDashboard();
                 setupEventListeners();
@@ -601,8 +593,8 @@
 
             const sucColors = sucLabels.map(label => {
                 const l = label.toUpperCase();
-                if (l.includes('VERACRUZ')) return '#38bdf8'; // Azul Cielo
-                if (l.includes('OAXACA')) return '#c86d51';   // Vintage Terracotta
+                if (l.includes('VERACRUZ')) return '#38bdf8';
+                if (l.includes('OAXACA')) return '#c86d51';
                 return '#818cf8';
             });
 
@@ -633,7 +625,6 @@
                 });
             }
 
-            // CREA LA GRÁFICA DE BARRAS CON ETIQUETAS DESTACADAS DE CANTIDAD DE VENTA
             createOrUpdateChart('chartSucursales', 'bar', {
                 labels: sucLabels,
                 datasets: [{
@@ -867,14 +858,12 @@
                 return;
             }
 
-            // Ordenar primero por Sucursal y luego por Vendedor
             rowsList.sort((a, b) => {
                 const sucCompare = a.sucursal.localeCompare(b.sucursal);
                 if (sucCompare !== 0) return sucCompare;
                 return a.vendedor.localeCompare(b.vendedor);
             });
 
-            // Agrupar filas por Sucursal y Vendedor para calcular subtotales y totales por sucursal
             const sucursalGroups = {};
             rowsList.forEach(r => {
                 if (!sucursalGroups[r.sucursal]) {
@@ -896,7 +885,6 @@
             });
 
             Object.entries(sucursalGroups).forEach(([sucName, sucData]) => {
-                // Iterar sobre cada vendedor de esta sucursal
                 Object.entries(sucData.vendedores).forEach(([vendedorName, vGroup]) => {
                     vGroup.items.forEach(r => {
                         const tr = document.createElement('tr');
@@ -916,7 +904,6 @@
                         tbody.appendChild(tr);
                     });
 
-                    // Fila de Subtotal por Vendedor
                     const trSub = document.createElement('tr');
                     trSub.className = 'bg-slate-900/60 border-b border-slate-800/80 font-bold';
                     trSub.innerHTML = `
@@ -930,7 +917,6 @@
                     tbody.appendChild(trSub);
                 });
 
-                // Fila de Total por Sucursal
                 const trSucTotal = document.createElement('tr');
                 trSucTotal.className = 'bg-sky-950/40 border-b-2 border-sky-800/60 font-black';
                 trSucTotal.innerHTML = `
@@ -964,13 +950,16 @@
 
                     if (json.length < 2) return;
 
+                    const idxCosto = 3; // Columna D
+                    const idxVentaBruta = 4; // Columna E
+
                     const parsedData = [];
                     for (let i = 1; i < json.length; i++) {
                         const r = json[i];
                         if (!r || r.length === 0) continue;
 
-                        const rawCosto = r[5] ?? 0; // Columna F
-                        const rawMonto = r[6] ?? 0; // Columna G
+                        const rawCosto = r[idxCosto] ?? 0;
+                        const rawMonto = r[idxVentaBruta] ?? 0;
 
                         const cst = Number(String(rawCosto).replace(/[^0-9.-]+/g,"")) || 0;
                         const vb = Number(String(rawMonto).replace(/[^0-9.-]+/g,"")) || 0;
