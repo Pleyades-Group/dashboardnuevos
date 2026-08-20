@@ -672,18 +672,13 @@
             document.getElementById('kpiCosto').textContent = formatCurrency(totalCosto);
             document.getElementById('kpiUtilidad').textContent = `${porcentajeUtilidad.toFixed(2)}%`;
 
+            renderResumenFinancieroPorSucursal(resumenFinancieroSucursales);
+
             renderCharts(filtered);
             renderTableByVendedorLinea(filtered);
         }
 
-        // Función auxiliar para determinar el color de cada sucursal de manera consistente
-        function getSucursalColor(label) {
-            const l = String(label || '').toUpperCase();
-            if (l.includes('VERACRUZ')) return '#38bdf8';
-            if (l.includes('OAXACA')) return '#c86d51';
-            return '#818cf8';
-        }
-
+        // --- FUNCIÓN ACTUALIZADA: MUESTRA UTILIDAD EN % Y EN PESOS ---
         function renderResumenFinancieroPorSucursal(resumenData) {
             const containerSucCards = document.getElementById('sucursalesDetailCards');
             if (!containerSucCards) return;
@@ -702,15 +697,14 @@
                 const costoSuc = dataSuc.costo;
                 const unidadesNetas = dataSuc.unidades;
                 
+                // Cálculo de utilidad en pesos
                 const utilidadPesos = vBruta - costoSuc;
 
+                // Cálculo de porcentaje de utilidad
                 let utilSuc = '0.00';
                 if (vBruta !== 0) {
                     utilSuc = ((utilidadPesos / Math.abs(vBruta)) * 100).toFixed(2);
                 }
-
-                // Obtener el color exacto correspondiente a esta sucursal
-                const sucColor = getSucursalColor(sucName);
 
                 const card = document.createElement('div');
                 card.className = 'border rounded-xl p-3 flex justify-between items-center shadow-sm';
@@ -719,7 +713,7 @@
                 card.innerHTML = `
                     <div>
                         <div class="flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full inline-block shadow-sm" style="background-color: ${sucColor};"></span>
+                            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
                             <p class="text-xs font-bold" style="color: var(--text-main);">${sucName}</p>
                         </div>
                         <p class="text-[11px] mt-1" style="color: var(--text-muted);">Venta Bruta: <span class="font-mono font-bold ${vBruta < 0 ? 'text-rose-400' : ''}" style="color: var(--text-main);">${formatCurrency(vBruta)}</span></p>
@@ -738,35 +732,28 @@
             const sucursalMap = {};
             const sucursalMontoMap = {};
             const sucursalCostoMap = {};
-            const resumenFinancieroSucursales = {};
 
             data.forEach(d => {
                 const s = String(d.sucursal || 'Sin Sucursal').trim();
-                const sucUpper = s.toUpperCase();
-                if (!sucUpper || sucUpper === 'NO DEFINIDA' || sucUpper === 'UNDEFINED' || sucUpper === 'NULL' || sucUpper === 'NAN') {
-                    return;
-                }
-
                 if (!sucursalMap[s]) {
                     sucursalMap[s] = 0;
                     sucursalMontoMap[s] = 0;
                     sucursalCostoMap[s] = 0;
-                    resumenFinancieroSucursales[s] = { unidades: 0, ventaBruta: 0, costo: 0 };
                 }
                 sucursalMap[s] += (d.cantidad || 0);
                 sucursalMontoMap[s] += (d.monto || 0);
                 sucursalCostoMap[s] += (d.costo || 0);
-
-                resumenFinancieroSucursales[s].unidades += (d.cantidad || 0);
-                resumenFinancieroSucursales[s].ventaBruta += (d.monto || 0);
-                resumenFinancieroSucursales[s].costo += (d.costo || 0);
             });
 
             const sucLabels = Object.keys(sucursalMap);
             const sucUnidades = sucLabels.map(k => sucursalMap[k]);
 
-            // Mapeo dinámico de colores de barras para asegurar correspondencia exacta
-            const sucColors = sucLabels.map(label => getSucursalColor(label));
+            const sucColors = sucLabels.map(label => {
+                const l = label.toUpperCase();
+                if (l.includes('VERACRUZ')) return '#38bdf8';
+                if (l.includes('OAXACA')) return '#c86d51';
+                return '#818cf8';
+            });
 
             document.getElementById('badgeSucursales').textContent = `${sucLabels.length} Agencias`;
 
@@ -822,8 +809,6 @@
                 }
             });
 
-            // Renderizar tarjetas financieras sincronizadas con los colores de la gráfica
-            renderResumenFinancieroPorSucursal(resumenFinancieroSucursales);
             renderTipoVentaBySucursalCharts(data);
         }
 
