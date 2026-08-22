@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Integral de Refacciones y Taller de Servicio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js & Chart.js Datalabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <!-- SheetJS for Excel Reading -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main, #0b0f19);
+            color: var(--text-main, #f1f5f9);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body.theme-dark {
+            --bg-main: #0b0f19;
+            --text-main: #f1f5f9;
+            --panel-bg: rgba(15, 23, 42, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --header-bg: rgba(15, 23, 42, 0.8);
+            --header-border: #1e293b;
+            --input-bg: #0f172a;
+            --input-border: #334155;
+            --text-muted: #94a3b8;
+            --table-header: rgba(15, 23, 42, 0.9);
+            --table-border: #1e293b;
+        }
+
+        body.theme-light {
+            --bg-main: #f1f5f9;
+            --text-main: #0f172a;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-border: rgba(0, 0, 0, 0.08);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --header-border: #e2e8f0;
+            --input-bg: #ffffff;
+            --input-border: #cbd5e1;
+            --text-muted: #64748b;
+            --table-header: rgba(241, 245, 249, 0.9);
+            --table-border: #e2e8f0;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+        }
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--card-border);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--input-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--input-border); border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen pb-12 theme-dark" id="appBody">
+
+    <header class="sticky top-0 z-40 border-b backdrop-blur-md px-4 lg:px-8 py-3" style="border-color: var(--header-border); background-color: var(--header-bg);">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+                    <i class="fa-solid fa-car-wrench text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight flex items-center gap-2" style="color: var(--text-main);">
+                        POSVENTA <span class="text-amber-400 font-medium text-sm px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/50">Taller y Mostrador</span>
+                    </h1>
+                    <p class="text-xs" style="color: var(--text-muted);">Refacciones, Mano de Obra (ImpMO) y Trabajos Fuera de Taller (T.O.T)</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Botón Sincronizar Google Sheets -->
+                <button id="btnSyncGoogleSheets" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-emerald-600/20">
+                    <i class="fa-solid fa-rotate" id="syncIcon"></i>
+                    <span>Sincronizar Sheets</span>
+                </button>
+
+                <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-700/60 bg-slate-800/90 text-slate-200 hover:bg-slate-700">
+                    <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
+                    <span id="themeText">Tema Claro</span>
+                </button>
+
+                <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                    <span>Cargar Excel</span>
+                </button>
+
+                <button id="btnExportCSV" class="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-amber-600/20">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Exportar CSV</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
+
+        <section class="glass-panel rounded-2xl p-4 shadow-xl">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Almacén</label>
+                    <select id="selAlmacen" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <option value="TODOS">Todos los almacenes</option>
+                        <option value="VERACRUZ">VERACRUZ</option>
+                        <option value="PUEBLA">PUEBLA</option>
+                        <option value="OAXACA">OAXACA</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Categoría Operativa</label>
+                    <select id="selCategoria" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                        <option value="TODOS">Todos los conceptos</option>
+                        <option value="REFACCIONES TALLER">Refacciones (Taller de Servicio)</option>
+                        <option value="REFACCIONES MOSTRADOR">Refacciones (Mostrador)</option>
+                        <option value="MANO DE OBRA">Mano de Obra</option>
+                        <option value="T.O.T">Trabajos Fuera de Taller (T.O.T)</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Filtro Checkbox para Omitir Ventas Internas -->
+            <div class="mt-4 pt-3 border-t flex items-center gap-3" style="border-color: var(--input-border);">
+                <input type="checkbox" id="chkExcludeInternas" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" checked>
+                <label for="chkExcludeInternas" class="text-xs font-semibold cursor-pointer select-none" style="color: var(--text-main);">
+                    Omitir ventas de servicio internas
+                </label>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">VENTA REFACCIONES POR TALLER</span>
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-gears"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiRefaccionesTaller">$0.00</div>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiRefTallerCosto">Costo Ref: $0.00 (Col: Costo Ref)</p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">VENTA REFACCIONES POR MOSTRADOR</span>
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiRefaccionesMostrador">$0.00</div>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiRefMostradorCosto">Costo: $0.00 (Col: Costo)</p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">VENTA DE MANO DE OBRA</span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-wrench"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiManoObra">$0.00</div>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);">Mano de Obra Taller</p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">VENTA DE T.O.T</span>
+                    <div class="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-400 flex items-center justify-center text-sm">
+                        <i class="fa-solid fa-truck-ramp-box"></i>
+                    </div>
+                </div>
+                <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiTot">$0.00</div>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiTotCosto">Costo T.O.T: $0.00 (Col: Costo T.O.T)</p>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE GRÁFICAS Y RESUMENES -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            
+            <!-- Columna Izquierda: Gráfica 1 + Tabla Resumen Desglosada por Almacén -->
+            <div class="space-y-6">
+                <!-- Gráfica 1: Venta Operativa -->
+                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                                <i class="fa-solid fa-chart-column text-amber-400"></i> Venta por Categoría Operativa
+                            </h3>
+                            <p class="text-xs" style="color: var(--text-muted);">Desglose de ingresos por área (U26 y U931)</p>
+                        </div>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="chartCategorias"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabla Resumen Operativo por Almacén -->
+                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                    <div class="mb-4">
+                        <h4 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                            <i class="fa-solid fa-list-check text-sky-400"></i> Resumen de Operación por Almacén
+                        </h4>
+                        <p class="text-xs" style="color: var(--text-muted);">Desglose de Venta, Costo y Utilidad ($) por segmento operativo</p>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
+                        <table class="w-full text-left text-xs" style="color: var(--text-main);">
+                            <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
+                                <tr>
+                                    <th class="px-3 py-3">Almacén</th>
+                                    <th class="px-3 py-3 text-right">Ref. Taller<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                    <th class="px-3 py-3 text-right">Ref. Mostrador<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                    <th class="px-3 py-3 text-right">Mano Obra<br><span class="text-[10px] font-normal lowercase">(Venta)</span></th>
+                                    <th class="px-3 py-3 text-right">T.O.T<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblResumenBody" class="divide-y font-medium" style="border-color: var(--table-border);">
+                            </tbody>
+                            <tfoot id="tblResumenFoot" class="border-t-2 font-bold" style="background-color: var(--table-header); border-color: var(--table-border);">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Gráfica 2 (Valor Stock) + Tabla Resumenclas -->
+            <div class="space-y-6">
+                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                                <i class="fa-solid fa-boxes-stacked text-emerald-400"></i> Valor Stock por Almacén
+                            </h3>
+                            <p class="text-xs" style="color: var(--text-muted);">Inventario acumulado (Hoja: 175 Existencias)</p>
+                        </div>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="chartStockAlmacen"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabla Resumen Valor Stock por Clasificación y Almacén (Hoja: Resumenclas) -->
+                <div class="glass-panel rounded-2xl p-5 shadow-xl">
+                    <div class="mb-4">
+                        <h4 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
+                            <i class="fa-solid fa-layer-group text-emerald-400"></i> Resumen de Valor Stock por Clasificación y Almacén
+                        </h4>
+                        <p class="text-xs" style="color: var(--text-muted);">Desglose acumulado proveniente de la hoja Resumenclas</p>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
+                        <table class="w-full text-left text-xs" style="color: var(--text-main);">
+                            <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
+                                <tr>
+                                    <th class="px-3 py-3">Clasificación</th>
+                                    <th class="px-3 py-3 text-right">VERACRUZ</th>
+                                    <th class="px-3 py-3 text-right">PUEBLA</th>
+                                    <th class="px-3 py-3 text-right">OAXACA</th>
+                                    <th class="px-3 py-3 text-right">Total General</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblResumenclasBody" class="divide-y font-medium" style="border-color: var(--table-border);">
+                            </tbody>
+                            <tfoot id="tblResumenclasFoot" class="border-t-2 font-bold" style="background-color: var(--table-header); border-color: var(--table-border);">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
+            <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl mx-auto mb-3 border border-emerald-500/20">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <h3 class="text-lg font-bold" style="color: var(--text-main);">Cargar Archivo Excel de Posventa</h3>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Procesa automáticamente U26, U931, 175 Existencias y Resumenclas</p>
+            </div>
+
+            <div class="border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer" style="border-color: var(--input-border); background-color: var(--input-bg);" id="dropZone">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-500 mb-2"></i>
+                <p class="text-xs font-semibold" style="color: var(--text-main);">Haz clic o arrastra tu archivo Excel</p>
+                <p class="text-[10px] text-slate-500 mt-1">Soporta hojas múltiples .xlsx</p>
+                <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // URL de tu Google Sheets publicado como CSV
+        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?output=csv';
+
+        Chart.register(ChartDataLabels);
+
+        let masterData = [
+            { almacen: 'VERACRUZ', hoja: 'U26 Detalle Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 125000, costo: 87500, tipoV: 'Cliente' },
+            { almacen: 'VERACRUZ', hoja: 'U26 Detalle Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 95000, costo: 0, tipoV: 'Cliente' },
+            { almacen: 'VERACRUZ', hoja: 'U26 Detalle Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 32000, costo: 21000, tipoV: 'Interna' },
+            { almacen: 'VERACRUZ', hoja: 'U931 Detalle Refacciones', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 142000, costo: 99400, tipoV: '' },
+            { almacen: 'VERACRUZ', hoja: '175 Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 450000, costo: 0, tipoV: '' },
+            
+            { almacen: 'PUEBLA', hoja: 'U26 Detalle Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 110000, costo: 77000, tipoV: 'Cliente' },
+            { almacen: 'PUEBLA', hoja: 'U26 Detalle Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 82000, costo: 0, tipoV: 'Interna' },
+            { almacen: 'PUEBLA', hoja: 'U26 Detalle Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 25000, costo: 16000, tipoV: 'Cliente' },
+            { almacen: 'PUEBLA', hoja: 'U931 Detalle Refacciones', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 115000, costo: 80500, tipoV: '' },
+            { almacen: 'PUEBLA', hoja: '175 Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 380000, costo: 0, tipoV: '' },
+
+            { almacen: 'OAXACA', hoja: 'U26 Detalle Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 84000, costo: 58800, tipoV: 'Cliente' },
+            { almacen: 'OAXACA', hoja: 'U26 Detalle Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 61000, costo: 0, tipoV: 'Cliente' },
+            { almacen: 'OAXACA', hoja: 'U26 Detalle Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 18000, costo: 12500, tipoV: 'Interna' },
+            { almacen: 'OAXACA', hoja: 'U931 Detalle Refacciones', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 91000, costo: 63700, tipoV: '' },
+            { almacen: 'OAXACA', hoja: '175 Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 290000, costo: 0, tipoV: '' }
+        ];
+
+        let resumenClasData = [
+            { clasificacion: 'A', veracruz: 220000, puebla: 180000, oaxaca: 140000 },
+            { clasificacion: 'B', veracruz: 150000, puebla: 120000, oaxaca: 90000 },
+            { clasificacion: 'C', veracruz: 80000, puebla: 60000, oaxaca: 40000 },
+            { clasificacion: 'D', veracruz: 0, puebla: 20000, oaxaca: 20000 }
+        ];
+
+        let charts = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initThemeToggle();
+            setupEventListeners();
+            
+            // Intenta cargar datos desde Google Sheets si la constante no está vacía
+            if (GOOGLE_SHEETS_CSV_URL && GOOGLE_SHEETS_CSV_URL.startsWith('http')) {
+                fetchGoogleSheetsData();
+            } else {
+                updateDashboard();
+            }
+        });
+
+        function initThemeToggle() {
+            const btnToggle = document.getElementById('btnToggleTheme');
+            const appBody = document.getElementById('appBody');
+            const savedTheme = localStorage.getItem('posventa_dashboard_theme') || 'theme-dark';
+            appBody.className = `min-h-screen pb-12 ${savedTheme}`;
+            updateThemeButtonUI(savedTheme);
+
+            btnToggle.onclick = () => {
+                const currentTheme = appBody.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';
+                const newTheme = currentTheme === 'theme-dark' ? 'theme-light' : 'theme-dark';
+                appBody.className = `min-h-screen pb-12 ${newTheme}`;
+                localStorage.setItem('posventa_dashboard_theme', newTheme);
+                updateThemeButtonUI(newTheme);
+                updateDashboard();
+            };
+        }
+
+        function updateThemeButtonUI(theme) {
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            if (theme === 'theme-light') {
+                themeIcon.className = 'fa-solid fa-moon text-indigo-600';
+                themeText.textContent = 'Tema Oscuro';
+            } else {
+                themeIcon.className = 'fa-solid fa-sun text-amber-400';
+                themeText.textContent = 'Tema Claro';
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('selAlmacen').addEventListener('change', updateDashboard);
+            document.getElementById('selCategoria').addEventListener('change', updateDashboard);
+            document.getElementById('chkExcludeInternas').addEventListener('change', updateDashboard);
+            document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
+            
+            document.getElementById('btnSyncGoogleSheets').addEventListener('click', fetchGoogleSheetsData);
+
+            const modal = document.getElementById('mdlUpload');
+            document.getElementById('btnUploadModal').onclick = () => modal.classList.remove('hidden');
+            document.getElementById('btnCloseModal').onclick = () => modal.classList.add('hidden');
+            
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            dropZone.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => handleExcelUpload(e.target.files[0]);
+        }
+
+        // FUNCIÓN PARA SOLICITAR Y PROCESAR EL CSV DE GOOGLE SHEETS
+        async function fetchGoogleSheetsData() {
+            if (!GOOGLE_SHEETS_CSV_URL || !GOOGLE_SHEETS_CSV_URL.startsWith('http')) {
+                alert("Por favor asigna la URL correcta de tu archivo Google Sheets CSV en la constante GOOGLE_SHEETS_CSV_URL dentro del código.");
+                return;
+            }
+
+            const syncIcon = document.getElementById('syncIcon');
+            if (syncIcon) syncIcon.classList.add('fa-spin');
+
+            try {
+                const response = await fetch(GOOGLE_SHEETS_CSV_URL + '?t=' + new Date().getTime());
+                if (!response.ok) throw new Error('Error al conectar con Google Sheets');
+                
+                const csvText = await response.text();
+                processCSVData(csvText);
+            } catch (error) {
+                console.error("Error al cargar Google Sheets:", error);
+                alert("Hubo un problema al cargar los datos desde Google Sheets. Verifique la URL enviada.");
+            } finally {
+                if (syncIcon) syncIcon.classList.remove('fa-spin');
+            }
+        }
+
+        // PROCESADOR DEL TEXTO CSV OBTENIDO DE GOOGLE SHEETS
+        function processCSVData(csvText) {
+            const lines = parseCSVLines(csvText);
+            if (lines.length < 2) return;
+
+            const headers = lines[0].map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+            let parsedMaster = [];
+            let parsedResumenclas = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i];
+                if (!row || row.length < 2) continue;
+
+                let rowObj = {};
+                headers.forEach((h, idx) => {
+                    rowObj[h] = row[idx] ? row[idx].trim() : '';
+                });
+
+                // Si contiene columnas de Clasificación (Resumenclas)
+                let clas = getStringValByExactNames(rowObj, ['clasificacion', 'clasif', 'clase']);
+                if (clas) {
+                    parsedResumenclas.push({
+                        clasificacion: clas,
+                        veracruz: getValByExactNames(rowObj, ['veracruz', 'ver']),
+                        puebla: getValByExactNames(rowObj, ['puebla', 'pue']),
+                        oaxaca: getValByExactNames(rowObj, ['oaxaca', 'oax'])
+                    });
+                    continue;
+                }
+
+                // Extraer registro general (MasterData)
+                let almacen = detectAlmacen(rowObj, '');
+                let hoja = getStringValByExactNames(rowObj, ['hoja', 'sheet', 'origen']) || 'Detalle';
+                let categoria = getStringValByExactNames(rowObj, ['categoria', 'categoria operativa', 'cat']) || 'OTRO';
+                let concepto = getStringValByExactNames(rowObj, ['concepto', 'descripcion']) || 'Venta general';
+                let tipoV = getStringValByExactNames(rowObj, ['tipov', 'tipo_v', 'tipo venta']);
+                let venta = parseNum(rowObj['venta'] || rowObj['importe'] || rowObj['subtotal'] || 0);
+                let costo = parseNum(rowObj['costo'] || rowObj['costo ref'] || 0);
+
+                if (venta !== 0 || costo !== 0) {
+                    parsedMaster.push({ almacen, hoja, categoria, concepto, venta, costo, tipoV });
+                }
+            }
+
+            if (parsedMaster.length > 0) masterData = parsedMaster;
+            if (parsedResumenclas.length > 0) resumenClasData = parsedResumenclas;
+
+            updateDashboard();
+        }
+
+        // UTILERÍA PARA PARSEAR LÍNEAS DE CSV RESPETANDO COMILLAS
+        function parseCSVLines(text) {
+            const lines = [];
+            let row = [];
+            let insideQuotes = false;
+            let entry = '';
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i+1];
+
+                if (char === '"') {
+                    if (insideQuotes && nextChar === '"') {
+                        entry += '"';
+                        i++;
+                    } else {
+                        insideQuotes = !insideQuotes;
+                    }
+                } else if (char === ',' && !insideQuotes) {
+                    row.push(entry);
+                    entry = '';
+                } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+                    if (char === '\r' && nextChar === '\n') { i++; }
+                    row.push(entry);
+                    if (row.some(c => c.trim() !== '')) lines.push(row);
+                    row = [];
+                    entry = '';
+                } else {
+                    entry += char;
+                }
+            }
+            if (entry || row.length > 0) {
+                row.push(entry);
+                if (row.some(c => c.trim() !== '')) lines.push(row);
+            }
+            return lines;
+        }
+
+        function getFilteredData() {
+            const almacen = document.getElementById('selAlmacen').value;
+            const categoria = document.getElementById('selCategoria').value;
+            const excludeInternas = document.getElementById('chkExcludeInternas').checked;
+
+            return masterData.filter(d => {
+                if (almacen !== 'TODOS' && d.almacen !== almacen) return false;
+                if (categoria !== 'TODOS' && d.categoria !== categoria) return false;
+                
+                if (excludeInternas && d.hoja === 'U26 Detalle Servicio' && String(d.tipoV || '').trim().toLowerCase() === 'interna') {
+                    return false;
+                }
+
+                return true;
+            });
+        }
+
+        function updateDashboard() {
+            const filtered = getFilteredData();
+
+            const selAlmacen = document.getElementById('selAlmacen');
+            const currentSelectedAlm = selAlmacen.value;
+            const uniqueAlmacenes = [...new Set(masterData.map(d => d.almacen || 'VERACRUZ'))];
+            
+            selAlmacen.innerHTML = '<option value="TODOS">Todos los almacenes</option>';
+            uniqueAlmacenes.forEach(alm => {
+                selAlmacen.innerHTML += `<option value="${alm}">${alm}</option>`;
+            });
+            const defaultAlms = ['TODOS', 'VERACRUZ', 'PUEBLA', 'OAXACA'];
+            if (!defaultAlms.includes(currentSelectedAlm) && !uniqueAlmacenes.includes(currentSelectedAlm)) {
+                selAlmacen.value = 'TODOS';
+            } else {
+                selAlmacen.value = currentSelectedAlm;
+            }
+
+            let ventaRefTaller = 0, costoRefTaller = 0;
+            let ventaRefMostrador = 0, costoRefMostrador = 0;
+            let ventaManoObra = 0;
+            let ventaTot = 0, costoTot = 0;
+
+            filtered.forEach(d => {
+                if (d.hoja === '175 Existencias' || d.hoja === 'Clasificacion') return;
+
+                const v = Number(d.venta) || 0;
+                const c = Number(d.costo) || 0;
+
+                if (d.categoria === 'REFACCIONES TALLER') {
+                    ventaRefTaller += v;
+                    costoRefTaller += c;
+                }
+                if (d.categoria === 'REFACCIONES MOSTRADOR') {
+                    ventaRefMostrador += v;
+                    costoRefMostrador += c;
+                }
+                if (d.categoria === 'MANO DE OBRA') {
+                    ventaManoObra += v;
+                }
+                if (d.categoria === 'T.O.T') {
+                    ventaTot += v;
+                    costoTot += c;
+                }
+            });
+
+            document.getElementById('kpiRefaccionesTaller').textContent = formatCurrency(ventaRefTaller);
+            document.getElementById('kpiRefTallerCosto').textContent = `Costo Ref: ${formatCurrency(costoRefTaller)} `;
+
+            document.getElementById('kpiRefaccionesMostrador').textContent = formatCurrency(ventaRefMostrador);
+            document.getElementById('kpiRefMostradorCosto').textContent = `Costo: ${formatCurrency(costoRefMostrador)} `;
+
+            document.getElementById('kpiManoObra').textContent = formatCurrency(ventaManoObra);
+
+            document.getElementById('kpiTot').textContent = formatCurrency(ventaTot);
+            document.getElementById('kpiTotCosto').textContent = `Costo T.O.T: ${formatCurrency(costoTot)} `;
+
+            renderCharts(filtered);
+            renderResumenTable(filtered);
+            renderResumenclasTable();
+        }
+
+        function renderCharts(filteredData) {
+            const selectedAlmacen = document.getElementById('selAlmacen').value;
+            
+            let almacenes = selectedAlmacen === 'TODOS' 
+                ? [...new Set(masterData.map(d => d.almacen || 'VERACRUZ'))]
+                : [selectedAlmacen];
+
+            // 1. GRAFICA VENTA POR CATEGORIA OPERATIVA
+            const dataRefacciones = [];
+            const dataManoObra = [];
+            const dataTot = [];
+
+            almacenes.forEach(alm => {
+                const almData = filteredData.filter(d => (d.almacen || 'VERACRUZ') === alm && d.hoja !== '175 Existencias' && d.hoja !== 'Clasificacion');
+                let sumRef = 0, sumMO = 0, sumTot = 0;
+
+                almData.forEach(d => {
+                    const val = Number(d.venta) || 0;
+                    if (d.categoria === 'REFACCIONES TALLER' || d.categoria === 'REFACCIONES MOSTRADOR') {
+                        sumRef += val;
+                    } else if (d.categoria === 'MANO DE OBRA') {
+                        sumMO += val;
+                    } else if (d.categoria === 'T.O.T') {
+                        sumTot += val;
+                    }
+                });
+
+                dataRefacciones.push(sumRef);
+                dataManoObra.push(sumMO);
+                dataTot.push(sumTot);
+            });
+
+            createOrUpdateChart('chartCategorias', 'bar', {
+                labels: almacenes,
+                datasets: [
+                    {
+                        label: 'Refacciones (Total)',
+                        data: dataRefacciones,
+                        backgroundColor: '#38bdf8',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Mano de Obra',
+                        data: dataManoObra,
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'T.O.T',
+                        data: dataTot,
+                        backgroundColor: '#f97316',
+                        borderRadius: 4
+                    }
+                ]
+            }, {
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } },
+                    datalabels: {
+                        anchor: 'center',
+                        align: 'center',
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: (v) => v > 0 ? formatCurrency(v) : ''
+                    }
+                },
+                scales: {
+                    y: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { display: false } }
+                }
+            });
+
+            // 2. GRAFICA INDEPENDIENTE: VALOR STOCK POR ALMACEN (DESDE HOJA: 175 Existencias)
+            const stockValues = almacenes.map(alm => {
+                return masterData
+                    .filter(d => (d.hoja === '175 Existencias' || d.hoja === 'Clasificacion') && (d.almacen || 'VERACRUZ') === alm)
+                    .reduce((acc, curr) => acc + (Number(curr.venta) || 0), 0);
+            });
+
+            createOrUpdateChart('chartStockAlmacen', 'bar', {
+                labels: almacenes,
+                datasets: [{
+                    label: 'Valor Stock',
+                    data: stockValues,
+                    backgroundColor: '#10b981',
+                    borderRadius: 6
+                }]
+            }, {
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        color: '#34d399',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: (v) => v > 0 ? formatCurrency(v) : ''
+                    }
+                },
+                scales: {
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                }
+            });
+        }
+
+        function renderResumenTable(filteredData) {
+            const tbody = document.getElementById('tblResumenBody');
+            const tfoot = document.getElementById('tblResumenFoot');
+            tbody.innerHTML = '';
+            tfoot.innerHTML = '';
+
+            const selectedAlmacen = document.getElementById('selAlmacen').value;
+            let almacenes = selectedAlmacen === 'TODOS' 
+                ? [...new Set(masterData.map(d => d.almacen || 'VERACRUZ'))]
+                : [selectedAlmacen];
+
+            let totVRefTaller = 0, totCRefTaller = 0;
+            let totVRefMostrador = 0, totCRefMostrador = 0;
+            let totVMO = 0;
+            let totVTot = 0, totCTot = 0;
+
+            almacenes.forEach(alm => {
+                const almData = filteredData.filter(d => (d.almacen || 'VERACRUZ') === alm && d.hoja !== '175 Existencias' && d.hoja !== 'Clasificacion');
+
+                let vRefTaller = 0, cRefTaller = 0;
+                let vRefMostrador = 0, cRefMostrador = 0;
+                let vMO = 0;
+                let vTot = 0, cTot = 0;
+
+                almData.forEach(d => {
+                    const v = Number(d.venta) || 0;
+                    const c = Number(d.costo) || 0;
+
+                    if (d.categoria === 'REFACCIONES TALLER') {
+                        vRefTaller += v;
+                        cRefTaller += c;
+                    } else if (d.categoria === 'REFACCIONES MOSTRADOR') {
+                        vRefMostrador += v;
+                        cRefMostrador += c;
+                    } else if (d.categoria === 'MANO DE OBRA') {
+                        vMO += v;
+                    } else if (d.categoria === 'T.O.T') {
+                        vTot += v;
+                        cTot += c;
+                    }
+                });
+
+                totVRefTaller += vRefTaller; totCRefTaller += cRefTaller;
+                totVRefMostrador += vRefMostrador; totCRefMostrador += cRefMostrador;
+                totVMO += vMO;
+                totVTot += vTot; totCTot += cTot;
+
+                const uRefTaller = vRefTaller - cRefTaller;
+                const uRefMostrador = vRefMostrador - cRefMostrador;
+                const uTot = vTot - cTot;
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
+                        <td class="px-3 py-3 font-bold text-sky-400 text-sm">${alm}</td>
+                        <td class="px-3 py-3 text-right font-mono">
+                            <span class="text-sky-300 font-semibold">${formatCurrency(vRefTaller)}</span><br>
+                            <span class="text-rose-400 text-xs">${formatCurrency(cRefTaller)}</span><br>
+                            <span class="${uRefTaller < 0 ? 'text-rose-400' : 'text-emerald-400'} text-xs font-bold">${formatCurrency(uRefTaller)}</span>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono">
+                            <span class="text-sky-300 font-semibold">${formatCurrency(vRefMostrador)}</span><br>
+                            <span class="text-rose-400 text-xs">${formatCurrency(cRefMostrador)}</span><br>
+                            <span class="${uRefMostrador < 0 ? 'text-rose-400' : 'text-emerald-400'} text-xs font-bold">${formatCurrency(uRefMostrador)}</span>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono">
+                            <span class="text-emerald-400 font-semibold">${formatCurrency(vMO)}</span>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono">
+                            <span class="text-orange-300 font-semibold">${formatCurrency(vTot)}</span><br>
+                            <span class="text-rose-400 text-xs">${formatCurrency(cTot)}</span><br>
+                            <span class="${uTot < 0 ? 'text-rose-400' : 'text-emerald-400'} text-xs font-bold">${formatCurrency(uTot)}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const totURefTaller = totVRefTaller - totCRefTaller;
+            const totURefMostrador = totVRefMostrador - totCRefMostrador;
+            const totUTot = totVTot - totCTot;
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="px-3 py-3 text-amber-400 font-extrabold text-sm uppercase">TOTALES</td>
+                    <td class="px-3 py-3 text-right font-mono">
+                        <span class="text-sky-300 font-bold">${formatCurrency(totVRefTaller)}</span><br>
+                        <span class="text-rose-400 text-xs">${formatCurrency(totCRefTaller)}</span><br>
+                        <span class="${totURefTaller < 0 ? 'text-rose-400' : 'text-emerald-400'} text-xs font-black">${formatCurrency(totURefTaller)}</span>
+                    </td>
+                    <td class="px-3 py-3 text-right font-mono">
+                        <span class="text-sky-300 font-bold">${formatCurrency(totVRefMostrador)}</span><br>
+                        <span class="text-rose-400 text-xs">${formatCurrency(totCRefMostrador)}</span><br>
+                        <span class="${totURefMostrador < 0 ? 'text-rose-400' : 'text-emerald-400'} text-xs font-black">${formatCurrency(totURefMostrador)}</span>
+                    </td>
+                    <td class="px-3 py-3 text-right font-mono">
+                        <span class="text-emerald-400 font-bold">${formatCurrency(totVMO)}</span>
+                    </td>
+                    <td class="px-3 py-3 text-right font-mono">
+                        <span class="text-orange-300 font-bold">${formatCurrency(totVTot)}</span><br>
+                        <span class="text-rose-400 text-xs">${formatCurrency(totCTot)}</span><br>
+                        <span class="${totUTot < 0 ? 'text-rose-400' : 'text-emerald-400'} text-xs font-black">${formatCurrency(totUTot)}</span>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderResumenclasTable() {
+            const tbody = document.getElementById('tblResumenclasBody');
+            const tfoot = document.getElementById('tblResumenclasFoot');
+            tbody.innerHTML = '';
+            tfoot.innerHTML = '';
+
+            const selectedAlmacen = document.getElementById('selAlmacen').value;
+
+            let totVeracruz = 0;
+            let totPuebla = 0;
+            let totOaxaca = 0;
+            let totGlobal = 0;
+
+            resumenClasData.forEach(row => {
+                const clas = row.clasificacion;
+                const vVer = selectedAlmacen === 'TODOS' || selectedAlmacen === 'VERACRUZ' ? Number(row.veracruz) || 0 : 0;
+                const vPue = selectedAlmacen === 'TODOS' || selectedAlmacen === 'PUEBLA' ? Number(row.puebla) || 0 : 0;
+                const vOax = selectedAlmacen === 'TODOS' || selectedAlmacen === 'OAXACA' ? Number(row.oaxaca) || 0 : 0;
+
+                const rowTotal = vVer + vPue + vOax;
+
+                totVeracruz += vVer;
+                totPuebla += vPue;
+                totOaxaca += vOax;
+                totGlobal += rowTotal;
+
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
+                        <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
+                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vVer)}</td>
+                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vPue)}</td>
+                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vOax)}</td>
+                        <td class="px-3 py-2.5 text-right font-mono font-bold text-emerald-400">${formatCurrency(rowTotal)}</td>
+                    </tr>
+                `;
+            });
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="px-3 py-3 text-amber-400 font-extrabold text-sm uppercase">TOTAL GENERAL</td>
+                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totVeracruz)}</td>
+                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totPuebla)}</td>
+                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totOaxaca)}</td>
+                    <td class="px-3 py-3 text-right font-mono text-emerald-400 font-black">${formatCurrency(totGlobal)}</td>
+                </tr>
+            `;
+        }
+
+        function createOrUpdateChart(canvasId, type, dataConfig, customOptions = {}) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[canvasId]) charts[canvasId].destroy();
+            charts[canvasId] = new Chart(ctx, { type, data: dataConfig, options: { responsive: true, maintainAspectRatio: false, ...customOptions } });
+        }
+
+        function parseNum(val) {
+            if (typeof val === 'number') return val;
+            if (!val) return 0;
+            const strVal = String(val).trim();
+            
+            let isNegative = false;
+            if (strVal.startsWith('(') && strVal.endsWith(')')) {
+                isNegative = true;
+            } else if (strVal.startsWith('-')) {
+                isNegative = true;
+            }
+
+            const cleaned = strVal.replace(/[^0-9.-]+/g, "");
+            let num = parseFloat(cleaned);
+            if (isNaN(num)) return 0;
+
+            if (isNegative) {
+                num = -Math.abs(num);
+            }
+            return num;
+        }
+
+        function getValByExactNames(row, exactNames) {
+            const keys = Object.keys(row);
+            for (let name of exactNames) {
+                const normTarget = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                for (let k of keys) {
+                    const normK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                    if (normK === normTarget) {
+                        return parseNum(row[k]);
+                    }
+                }
+            }
+            return 0;
+        }
+
+        function getStringValByExactNames(row, exactNames) {
+            const keys = Object.keys(row);
+            for (let name of exactNames) {
+                const normTarget = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                for (let k of keys) {
+                    const normK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                    if (normK === normTarget) {
+                        return String(row[k] || '').trim();
+                    }
+                }
+            }
+            return '';
+        }
+
+        function detectAlmacen(row, sheetName) {
+            let rowAlmacen = getStringValByExactNames(row, ['Almacen', 'Almacén', 'Sucursal']);
+            if (rowAlmacen) {
+                const almUpper = rowAlmacen.toUpperCase();
+                if (almUpper.includes('VERACRUZ') || almUpper.includes('VER')) return 'VERACRUZ';
+                if (almUpper.includes('PUEBLA') || almUpper.includes('PUE')) return 'PUEBLA';
+                if (almUpper.includes('OAXACA') || almUpper.includes('OAX')) return 'OAXACA';
+                return rowAlmacen.toUpperCase();
+            }
+
+            const sNorm = sheetName.toUpperCase();
+            if (sNorm.includes('VERACRUZ') || sNorm.includes('VER')) return 'VERACRUZ';
+            if (sNorm.includes('PUEBLA') || sNorm.includes('PUE')) return 'PUEBLA';
+            if (sNorm.includes('OAXACA') || sNorm.includes('OAX')) return 'OAXACA';
+
+            const rowStr = JSON.stringify(row).toUpperCase();
+            if (rowStr.includes('VERACRUZ')) return 'VERACRUZ';
+            if (rowStr.includes('PUEBLA')) return 'PUEBLA';
+            if (rowStr.includes('OAXACA')) return 'OAXACA';
+
+            return 'VERACRUZ';
+        }
+
+        function handleExcelUpload(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                let parsedRows = [];
+                let parsedResumenclas = [];
+
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                    
+                    const sLower = sheetName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+                    const isU26 = sLower.includes('u26') || sLower.includes('detalle servicio');
+                    const isU931 = sLower.includes('u931') || sLower.includes('detalle refacciones');
+                    const isExistencias = sLower.includes('175') || sLower.includes('existencias');
+                    const isResumenclas = sLower.includes('resumenclas') || sLower.includes('resumen clas');
+
+                    if (isResumenclas) {
+                        json.forEach((row) => {
+                            let clasificacion = getStringValByExactNames(row, ['Clasificacion', 'Clasificación', 'Clasif', 'Clase']);
+                            if (clasificacion) {
+                                let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER']);
+                                let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE']);
+                                let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX']);
+
+                                parsedResumenclas.push({
+                                    clasificacion,
+                                    veracruz,
+                                    puebla,
+                                    oaxaca
+                                });
+                            }
+                        });
+                        return;
+                    }
+
+                    if (!isU26 && !isU931 && !isExistencias) return;
+
+                    json.forEach((row) => {
+                        let almacen = detectAlmacen(row, sheetName);
+                        let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
+
+                        if (isU26) {
+                            let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones']);
+                            let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef']);
+                            let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra']);
+                            let totVenta = getValByExactNames(row, ['T.O.T', 'TOT', 'T O T']);
+                            let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT']);
+
+                            if (refVenta !== 0 || refCosto !== 0) {
+                                parsedRows.push({ 
+                                    almacen,
+                                    hoja: 'U26 Detalle Servicio', 
+                                    categoria: 'REFACCIONES TALLER', 
+                                    concepto: 'Refacción Taller Servicio (Col: Vta. Ref)', 
+                                    venta: refVenta, 
+                                    costo: refCosto,
+                                    tipoV 
+                                });
+                            }
+                            if (manoObraVenta !== 0) {
+                                parsedRows.push({ 
+                                    almacen,
+                                    hoja: 'U26 Detalle Servicio', 
+                                    categoria: 'MANO DE OBRA', 
+                                    concepto: 'Mano de Obra (Col: ImpMO)', 
+                                    venta: manoObraVenta, 
+                                    costo: 0,
+                                    tipoV 
+                                });
+                            }
+                            if (totVenta !== 0 || totCosto !== 0) {
+                                parsedRows.push({ 
+                                    almacen,
+                                    hoja: 'U26 Detalle Servicio', 
+                                    categoria: 'T.O.T', 
+                                    concepto: 'Trabajos Fuera de Taller (Col: T.O.T)', 
+                                    venta: totVenta, 
+                                    costo: totCosto,
+                                    tipoV 
+                                });
+                            }
+                        } else if (isU931) {
+                            let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal']);
+                            let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref']);
+                            let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador (Col: Refacciones)').trim();
+
+                            if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
+                                parsedRows.push({ 
+                                    almacen,
+                                    hoja: 'U931 Detalle Refacciones', 
+                                    categoria: 'REFACCIONES MOSTRADOR', 
+                                    concepto, 
+                                    venta: refMostradorVenta, 
+                                    costo: refMostradorCosto,
+                                    tipoV: '' 
+                                });
+                            }
+                        } else if (isExistencias) {
+                            let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor']);
+                            let concepto = String(row.Concepto || row.Descripcion || row.Almacen || row.Almacén || 'Inventario Stock Refacciones').trim();
+                            if (inventarioVenta !== 0) {
+                                parsedRows.push({
+                                    almacen,
+                                    hoja: '175 Existencias',
+                                    categoria: 'STOCK',
+                                    concepto: `Existencias: ${concepto}`,
+                                    venta: inventarioVenta,
+                                    costo: 0,
+                                    tipoV: ''
+                                });
+                            }
+                        }
+                    });
+                });
+
+                if (parsedRows.length > 0 || parsedResumenclas.length > 0) {
+                    if (parsedRows.length > 0) masterData = parsedRows;
+                    if (parsedResumenclas.length > 0) resumenClasData = parsedResumenclas;
+                    
+                    updateDashboard();
+                    document.getElementById('mdlUpload').classList.add('hidden');
+                } else {
+                    alert('No se pudieron extraer registros válidos del archivo Excel enviado.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportToCSV() {
+            const data = getFilteredData();
+            if (!data.length) return;
+            const headers = ['Almacen', 'Hoja', 'Categoria', 'Concepto', 'TipoV', 'Venta', 'Costo'];
+            const rows = data.map(d => [`"${d.almacen || 'VERACRUZ'}"`, `"${d.hoja}"`, `"${d.categoria}"`, `"${d.concepto}"`, `"${d.tipoV || ''}"`, d.venta, d.costo]);
+            const csv = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const link = document.createElement('a');
+            link.setAttribute('href', encodeURI(csv));
+            link.setAttribute('download', `Posventa_Subaru_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function formatCurrency(val) {
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(val || 0);
+        }
+    </script>
+</body>
+</html>
