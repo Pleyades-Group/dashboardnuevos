@@ -13,6 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <!-- SheetJS for Excel Reading -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -86,22 +88,21 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-extrabold tracking-tight flex items-center gap-2" style="color: var(--text-main);">
-                        POSVENTA <span class="text-amber-400 font-medium text-sm px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/50">Taller y Mostrador</span>
+                        POSVENTA <span class="text-amber-400 font-medium text-sm px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/50">Servicio y Mostrador</span>
                     </h1>
-                    <p class="text-xs" style="color: var(--text-muted);">Refacciones, Mano de Obra (ImpMO) y Trabajos Fuera de Taller (T.O.T)</p>
+                    <p class="text-xs" style="color: var(--text-muted);">Refacciones, Mano de Obra (ImpMO), Trabajos Fuera de Taller (T.O.T) y Existencias</p>
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
-                <!-- Botón Sincronizar Google Sheets -->
-                <button id="btnSyncGoogleSheets" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-emerald-600/20">
-                    <i class="fa-solid fa-rotate" id="syncIcon"></i>
-                    <span>Sincronizar Sheets</span>
-                </button>
-
                 <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition border border-slate-700/60 bg-slate-800/90 text-slate-200 hover:bg-slate-700">
                     <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
                     <span id="themeText">Tema Claro</span>
+                </button>
+
+                <button id="btnGoogleSheetsSync" class="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-emerald-700/25">
+                    <i id="syncIcon" class="fa-solid fa-cloud-arrow-down"></i>
+                    <span>Sincronizar</span>
                 </button>
 
                 <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">
@@ -134,7 +135,7 @@
                     <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Categoría Operativa</label>
                     <select id="selCategoria" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
                         <option value="TODOS">Todos los conceptos</option>
-                        <option value="REFACCIONES TALLER">Refacciones (Taller de Servicio)</option>
+                        <option value="REFACCIONES TALLER">Refacciones (Servicio)</option>
                         <option value="REFACCIONES MOSTRADOR">Refacciones (Mostrador)</option>
                         <option value="MANO DE OBRA">Mano de Obra</option>
                         <option value="T.O.T">Trabajos Fuera de Taller (T.O.T)</option>
@@ -142,24 +143,29 @@
                 </div>
             </div>
             <!-- Filtro Checkbox para Omitir Ventas Internas -->
-            <div class="mt-4 pt-3 border-t flex items-center gap-3" style="border-color: var(--input-border);">
-                <input type="checkbox" id="chkExcludeInternas" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" checked>
-                <label for="chkExcludeInternas" class="text-xs font-semibold cursor-pointer select-none" style="color: var(--text-main);">
-                    Omitir ventas de servicio internas
-                </label>
+            <div class="mt-4 pt-3 border-t flex items-center justify-between" style="border-color: var(--input-border);">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="chkExcludeInternas" class="w-4 h-4 accent-amber-500 rounded cursor-pointer" checked>
+                    <label for="chkExcludeInternas" class="text-xs font-semibold cursor-pointer select-none" style="color: var(--text-main);">
+                        Omitir ventas de servicio internas
+                    </label>
+                </div>
+                <div id="syncStatusBadge" class="text-[11px] text-slate-400 font-medium">
+                    Modo: Datos Locales / Sincronizable con Google Sheets
+                </div>
             </div>
         </section>
 
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="glass-card rounded-2xl p-4">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">VENTA REFACCIONES POR TALLER</span>
+                    <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">VENTA REFACCIONES POR SERVICIO</span>
                     <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-sm">
                         <i class="fa-solid fa-gears"></i>
                     </div>
                 </div>
                 <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiRefaccionesTaller">$0.00</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiRefTallerCosto">Costo Ref: $0.00 (Col: Costo Ref)</p>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiRefTallerCosto">Costo Ref: $0.00</p>
             </div>
 
             <div class="glass-card rounded-2xl p-4">
@@ -170,7 +176,7 @@
                     </div>
                 </div>
                 <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiRefaccionesMostrador">$0.00</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiRefMostradorCosto">Costo: $0.00 (Col: Costo)</p>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiRefMostradorCosto">Costo: $0.00</p>
             </div>
 
             <div class="glass-card rounded-2xl p-4">
@@ -181,7 +187,7 @@
                     </div>
                 </div>
                 <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiManoObra">$0.00</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);">Mano de Obra Taller</p>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);">Mano de Obra Servicio</p>
             </div>
 
             <div class="glass-card rounded-2xl p-4">
@@ -192,23 +198,20 @@
                     </div>
                 </div>
                 <div class="text-2xl font-black" style="color: var(--text-main);" id="kpiTot">$0.00</div>
-                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiTotCosto">Costo T.O.T: $0.00 (Col: Costo T.O.T)</p>
+                <p class="text-[11px] mt-1" style="color: var(--text-muted);" id="kpiTotCosto">Costo T.O.T: $0.00</p>
             </div>
         </section>
 
-        <!-- SECCIÓN DE GRÁFICAS Y RESUMENES -->
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             
-            <!-- Columna Izquierda: Gráfica 1 + Tabla Resumen Desglosada por Almacén -->
             <div class="space-y-6">
-                <!-- Gráfica 1: Venta Operativa -->
                 <div class="glass-panel rounded-2xl p-5 shadow-xl">
                     <div class="flex justify-between items-center mb-4">
                         <div>
                             <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
                                 <i class="fa-solid fa-chart-column text-amber-400"></i> Venta por Categoría Operativa
                             </h3>
-                            <p class="text-xs" style="color: var(--text-muted);">Desglose de ingresos por área (U26 y U931)</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Desglose de ingresos (Servicio y Mostrador)</p>
                         </div>
                     </div>
                     <div class="relative h-64 w-full">
@@ -216,21 +219,20 @@
                     </div>
                 </div>
 
-                <!-- Tabla Resumen Operativo por Almacén -->
                 <div class="glass-panel rounded-2xl p-5 shadow-xl">
                     <div class="mb-4">
                         <h4 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
                             <i class="fa-solid fa-list-check text-sky-400"></i> Resumen de Operación por Almacén
                         </h4>
-                        <p class="text-xs" style="color: var(--text-muted);">Desglose de Venta, Costo y Utilidad ($) por segmento operativo</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Desglose de Venta, Costo y Utilidad ($)</p>
                     </div>
                     <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
                         <table class="w-full text-left text-xs" style="color: var(--text-main);">
                             <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
                                 <tr>
                                     <th class="px-3 py-3">Almacén</th>
-                                    <th class="px-3 py-3 text-right">Ref. Taller<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
-                                    <th class="px-3 py-3 text-right">Ref. Mostrador<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                    <th class="px-3 py-3 text-right">Servicio<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                    <th class="px-3 py-3 text-right">Mostrador<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
                                     <th class="px-3 py-3 text-right">Mano Obra<br><span class="text-[10px] font-normal lowercase">(Venta)</span></th>
                                     <th class="px-3 py-3 text-right">T.O.T<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
                                 </tr>
@@ -244,7 +246,6 @@
                 </div>
             </div>
 
-            <!-- Columna Derecha: Gráfica 2 (Valor Stock) + Tabla Resumenclas -->
             <div class="space-y-6">
                 <div class="glass-panel rounded-2xl p-5 shadow-xl">
                     <div class="flex justify-between items-center mb-4">
@@ -252,7 +253,7 @@
                             <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
                                 <i class="fa-solid fa-boxes-stacked text-emerald-400"></i> Valor Stock por Almacén
                             </h3>
-                            <p class="text-xs" style="color: var(--text-muted);">Inventario acumulado (Hoja: 175 Existencias)</p>
+                            <p class="text-xs" style="color: var(--text-muted);">Inventario acumulado (Hoja: Existencias)</p>
                         </div>
                     </div>
                     <div class="relative h-64 w-full">
@@ -260,22 +261,21 @@
                     </div>
                 </div>
 
-                <!-- Tabla Resumen Valor Stock por Clasificación y Almacén (Hoja: Resumenclas) -->
                 <div class="glass-panel rounded-2xl p-5 shadow-xl">
                     <div class="mb-4">
                         <h4 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
-                            <i class="fa-solid fa-layer-group text-emerald-400"></i> Resumen de Valor Stock por Clasificación y Almacén
+                            <i class="fa-solid fa-layer-group text-emerald-400"></i> Resumen de Valor Stock por Clasificación
                         </h4>
-                        <p class="text-xs" style="color: var(--text-muted);">Desglose acumulado proveniente de la hoja Resumenclas</p>
+                        <p class="text-xs" style="color: var(--text-muted);">Desglose acumulado proveniente de Resumenclas</p>
                     </div>
                     <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
                         <table class="w-full text-left text-xs" style="color: var(--text-main);">
                             <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
                                 <tr>
                                     <th class="px-3 py-3">Clasificación</th>
-                                    <th class="px-3 py-3 text-right">VERACRUZ</th>
                                     <th class="px-3 py-3 text-right">PUEBLA</th>
                                     <th class="px-3 py-3 text-right">OAXACA</th>
+                                    <th class="px-3 py-3 text-right">VERACRUZ</th>
                                     <th class="px-3 py-3 text-right">Total General</th>
                                 </tr>
                             </thead>
@@ -300,7 +300,7 @@
                     <i class="fa-solid fa-file-excel"></i>
                 </div>
                 <h3 class="text-lg font-bold" style="color: var(--text-main);">Cargar Archivo Excel de Posventa</h3>
-                <p class="text-xs mt-1" style="color: var(--text-muted);">Procesa automáticamente U26, U931, 175 Existencias y Resumenclas</p>
+                <p class="text-xs mt-1" style="color: var(--text-muted);">Procesa automáticamente "Servicio", "Mostrador", "Existencias" y "Resumenclas"</p>
             </div>
 
             <div class="border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer" style="border-color: var(--input-border); background-color: var(--input-bg);" id="dropZone">
@@ -313,29 +313,34 @@
     </div>
 
     <script>
-        // URL de tu Google Sheets publicado como CSV
-        const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?output=csv';
-
         Chart.register(ChartDataLabels);
 
-        let masterData = [
-            { almacen: 'VERACRUZ', hoja: 'U26 Detalle Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 125000, costo: 87500, tipoV: 'Cliente' },
-            { almacen: 'VERACRUZ', hoja: 'U26 Detalle Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 95000, costo: 0, tipoV: 'Cliente' },
-            { almacen: 'VERACRUZ', hoja: 'U26 Detalle Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 32000, costo: 21000, tipoV: 'Interna' },
-            { almacen: 'VERACRUZ', hoja: 'U931 Detalle Refacciones', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 142000, costo: 99400, tipoV: '' },
-            { almacen: 'VERACRUZ', hoja: '175 Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 450000, costo: 0, tipoV: '' },
-            
-            { almacen: 'PUEBLA', hoja: 'U26 Detalle Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 110000, costo: 77000, tipoV: 'Cliente' },
-            { almacen: 'PUEBLA', hoja: 'U26 Detalle Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 82000, costo: 0, tipoV: 'Interna' },
-            { almacen: 'PUEBLA', hoja: 'U26 Detalle Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 25000, costo: 16000, tipoV: 'Cliente' },
-            { almacen: 'PUEBLA', hoja: 'U931 Detalle Refacciones', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 115000, costo: 80500, tipoV: '' },
-            { almacen: 'PUEBLA', hoja: '175 Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 380000, costo: 0, tipoV: '' },
+        // GOOGLE SHEETS CSV URL CONFIGURATION CONSTANTS
+        const GOOGLE_SHEETS_CSV_URL = {
+            servicio: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=1841737790&single=true&output=csv',
+            mostrador: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=1921079646&single=true&output=csv',
+            existencias: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=814376793&single=true&output=csv',
+            resumenclas: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=132782580&single=true&output=csv'
+        };
 
-            { almacen: 'OAXACA', hoja: 'U26 Detalle Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 84000, costo: 58800, tipoV: 'Cliente' },
-            { almacen: 'OAXACA', hoja: 'U26 Detalle Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 61000, costo: 0, tipoV: 'Cliente' },
-            { almacen: 'OAXACA', hoja: 'U26 Detalle Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 18000, costo: 12500, tipoV: 'Interna' },
-            { almacen: 'OAXACA', hoja: 'U931 Detalle Refacciones', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 91000, costo: 63700, tipoV: '' },
-            { almacen: 'OAXACA', hoja: '175 Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 290000, costo: 0, tipoV: '' }
+        let masterData = [
+            { almacen: 'VERACRUZ', hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 125000, costo: 87500, tipoV: 'Cliente' },
+            { almacen: 'VERACRUZ', hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 95000, costo: 0, tipoV: 'Cliente' },
+            { almacen: 'VERACRUZ', hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 32000, costo: 21000, tipoV: 'Interna' },
+            { almacen: 'VERACRUZ', hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 142000, costo: 99400, tipoV: '' },
+            { almacen: 'VERACRUZ', hoja: 'Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 450000, costo: 0, tipoV: '' },
+            
+            { almacen: 'PUEBLA', hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 110000, costo: 77000, tipoV: 'Cliente' },
+            { almacen: 'PUEBLA', hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 82000, costo: 0, tipoV: 'Interna' },
+            { almacen: 'PUEBLA', hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 25000, costo: 16000, tipoV: 'Cliente' },
+            { almacen: 'PUEBLA', hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 115000, costo: 80500, tipoV: '' },
+            { almacen: 'PUEBLA', hoja: 'Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 380000, costo: 0, tipoV: '' },
+
+            { almacen: 'OAXACA', hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 84000, costo: 58800, tipoV: 'Cliente' },
+            { almacen: 'OAXACA', hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 61000, costo: 0, tipoV: 'Cliente' },
+            { almacen: 'OAXACA', hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 18000, costo: 12500, tipoV: 'Interna' },
+            { almacen: 'OAXACA', hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 91000, costo: 63700, tipoV: '' },
+            { almacen: 'OAXACA', hoja: 'Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 290000, costo: 0, tipoV: '' }
         ];
 
         let resumenClasData = [
@@ -350,13 +355,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initThemeToggle();
             setupEventListeners();
-            
-            // Intenta cargar datos desde Google Sheets si la constante no está vacía
-            if (GOOGLE_SHEETS_CSV_URL && GOOGLE_SHEETS_CSV_URL.startsWith('http')) {
-                fetchGoogleSheetsData();
-            } else {
-                updateDashboard();
-            }
+            fetchGoogleSheetsData();
         });
 
         function initThemeToggle() {
@@ -393,12 +392,16 @@
             document.getElementById('selCategoria').addEventListener('change', updateDashboard);
             document.getElementById('chkExcludeInternas').addEventListener('change', updateDashboard);
             document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
-            
-            document.getElementById('btnSyncGoogleSheets').addEventListener('click', fetchGoogleSheetsData);
 
-            const modal = document.getElementById('mdlUpload');
-            document.getElementById('btnUploadModal').onclick = () => modal.classList.remove('hidden');
-            document.getElementById('btnCloseModal').onclick = () => modal.classList.add('hidden');
+            // Google Sheets Direct Sync Button
+            document.getElementById('btnGoogleSheetsSync').onclick = () => {
+                fetchGoogleSheetsData();
+            };
+
+            // Excel Upload Modal
+            const uploadModal = document.getElementById('mdlUpload');
+            document.getElementById('btnUploadModal').onclick = () => uploadModal.classList.remove('hidden');
+            document.getElementById('btnCloseModal').onclick = () => uploadModal.classList.add('hidden');
             
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
@@ -406,116 +409,107 @@
             fileInput.onchange = (e) => handleExcelUpload(e.target.files[0]);
         }
 
-        // FUNCIÓN PARA SOLICITAR Y PROCESAR EL CSV DE GOOGLE SHEETS
+        // FETCH GOOGLE SHEETS LIVE DATA VIA CSV URLs
         async function fetchGoogleSheetsData() {
-            if (!GOOGLE_SHEETS_CSV_URL || !GOOGLE_SHEETS_CSV_URL.startsWith('http')) {
-                alert("Por favor asigna la URL correcta de tu archivo Google Sheets CSV en la constante GOOGLE_SHEETS_CSV_URL dentro del código.");
-                return;
-            }
-
+            const badge = document.getElementById('syncStatusBadge');
             const syncIcon = document.getElementById('syncIcon');
-            if (syncIcon) syncIcon.classList.add('fa-spin');
+            badge.textContent = 'Sincronizando con Google Sheets...';
+            badge.className = 'text-[11px] text-amber-400 font-medium animate-pulse';
+            syncIcon.className = 'fa-solid fa-rotate fa-spin';
+
+            let newRows = [];
+            let newResumenClas = [];
 
             try {
-                const response = await fetch(GOOGLE_SHEETS_CSV_URL + '?t=' + new Date().getTime());
-                if (!response.ok) throw new Error('Error al conectar con Google Sheets');
-                
-                const csvText = await response.text();
-                processCSVData(csvText);
-            } catch (error) {
-                console.error("Error al cargar Google Sheets:", error);
-                alert("Hubo un problema al cargar los datos desde Google Sheets. Verifique la URL enviada.");
-            } finally {
-                if (syncIcon) syncIcon.classList.remove('fa-spin');
-            }
-        }
+                // Fetch Servicio
+                if (GOOGLE_SHEETS_CSV_URL.servicio) {
+                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.servicio);
+                    const csvText = await res.text();
+                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+                    parsed.data.forEach(row => {
+                        let almacen = detectAlmacen(row, 'Servicio');
+                        let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
 
-        // PROCESADOR DEL TEXTO CSV OBTENIDO DE GOOGLE SHEETS
-        function processCSVData(csvText) {
-            const lines = parseCSVLines(csvText);
-            if (lines.length < 2) return;
+                        let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones']);
+                        let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef']);
+                        let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra']);
+                        let totVenta = getValByExactNames(row, ['T.O.T', 'TOT', 'T O T']);
+                        let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT']);
 
-            const headers = lines[0].map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-            let parsedMaster = [];
-            let parsedResumenclas = [];
-
-            for (let i = 1; i < lines.length; i++) {
-                const row = lines[i];
-                if (!row || row.length < 2) continue;
-
-                let rowObj = {};
-                headers.forEach((h, idx) => {
-                    rowObj[h] = row[idx] ? row[idx].trim() : '';
-                });
-
-                // Si contiene columnas de Clasificación (Resumenclas)
-                let clas = getStringValByExactNames(rowObj, ['clasificacion', 'clasif', 'clase']);
-                if (clas) {
-                    parsedResumenclas.push({
-                        clasificacion: clas,
-                        veracruz: getValByExactNames(rowObj, ['veracruz', 'ver']),
-                        puebla: getValByExactNames(rowObj, ['puebla', 'pue']),
-                        oaxaca: getValByExactNames(rowObj, ['oaxaca', 'oax'])
+                        if (refVenta !== 0 || refCosto !== 0) {
+                            newRows.push({ almacen, hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Refacción Taller Servicio', venta: refVenta, costo: refCosto, tipoV });
+                        }
+                        if (manoObraVenta !== 0) {
+                            newRows.push({ almacen, hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: manoObraVenta, costo: 0, tipoV });
+                        }
+                        if (totVenta !== 0 || totCosto !== 0) {
+                            newRows.push({ almacen, hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: totVenta, costo: totCosto, tipoV });
+                        }
                     });
-                    continue;
                 }
 
-                // Extraer registro general (MasterData)
-                let almacen = detectAlmacen(rowObj, '');
-                let hoja = getStringValByExactNames(rowObj, ['hoja', 'sheet', 'origen']) || 'Detalle';
-                let categoria = getStringValByExactNames(rowObj, ['categoria', 'categoria operativa', 'cat']) || 'OTRO';
-                let concepto = getStringValByExactNames(rowObj, ['concepto', 'descripcion']) || 'Venta general';
-                let tipoV = getStringValByExactNames(rowObj, ['tipov', 'tipo_v', 'tipo venta']);
-                let venta = parseNum(rowObj['venta'] || rowObj['importe'] || rowObj['subtotal'] || 0);
-                let costo = parseNum(rowObj['costo'] || rowObj['costo ref'] || 0);
+                // Fetch Mostrador
+                if (GOOGLE_SHEETS_CSV_URL.mostrador) {
+                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.mostrador);
+                    const csvText = await res.text();
+                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+                    parsed.data.forEach(row => {
+                        let almacen = detectAlmacen(row, 'Mostrador');
+                        let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal']);
+                        let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref']);
+                        let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador').trim();
 
-                if (venta !== 0 || costo !== 0) {
-                    parsedMaster.push({ almacen, hoja, categoria, concepto, venta, costo, tipoV });
+                        if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
+                            newRows.push({ almacen, hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto, venta: refMostradorVenta, costo: refMostradorCosto, tipoV: '' });
+                        }
+                    });
                 }
-            }
 
-            if (parsedMaster.length > 0) masterData = parsedMaster;
-            if (parsedResumenclas.length > 0) resumenClasData = parsedResumenclas;
-
-            updateDashboard();
-        }
-
-        // UTILERÍA PARA PARSEAR LÍNEAS DE CSV RESPETANDO COMILLAS
-        function parseCSVLines(text) {
-            const lines = [];
-            let row = [];
-            let insideQuotes = false;
-            let entry = '';
-
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-                const nextChar = text[i+1];
-
-                if (char === '"') {
-                    if (insideQuotes && nextChar === '"') {
-                        entry += '"';
-                        i++;
-                    } else {
-                        insideQuotes = !insideQuotes;
-                    }
-                } else if (char === ',' && !insideQuotes) {
-                    row.push(entry);
-                    entry = '';
-                } else if ((char === '\n' || char === '\r') && !insideQuotes) {
-                    if (char === '\r' && nextChar === '\n') { i++; }
-                    row.push(entry);
-                    if (row.some(c => c.trim() !== '')) lines.push(row);
-                    row = [];
-                    entry = '';
-                } else {
-                    entry += char;
+                // Fetch Existencias
+                if (GOOGLE_SHEETS_CSV_URL.existencias) {
+                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.existencias);
+                    const csvText = await res.text();
+                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+                    parsed.data.forEach(row => {
+                        let almacen = detectAlmacen(row, 'Existencias');
+                        let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor', 'Existencias']);
+                        let concepto = String(row.Concepto || row.Descripcion || row.Almacen || 'Inventario Stock').trim();
+                        if (inventarioVenta !== 0) {
+                            newRows.push({ almacen, hoja: 'Existencias', categoria: 'STOCK', concepto: `Existencias: ${concepto}`, venta: inventarioVenta, costo: 0, tipoV: '' });
+                        }
+                    });
                 }
+
+                // Fetch Resumenclas
+                if (GOOGLE_SHEETS_CSV_URL.resumenclas) {
+                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.resumenclas);
+                    const csvText = await res.text();
+                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+                    parsed.data.forEach(row => {
+                        let clasificacion = getStringValByExactNames(row, ['Clasificacion', 'Clasificación', 'Clasif', 'Clase']);
+                        if (clasificacion) {
+                            let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER']);
+                            let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE']);
+                            let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX']);
+                            newResumenClas.push({ clasificacion, veracruz, puebla, oaxaca });
+                        }
+                    });
+                }
+
+                if (newRows.length > 0) masterData = newRows;
+                if (newResumenClas.length > 0) resumenClasData = newResumenClas;
+
+                badge.textContent = 'Sincronizado correctamente con Google Sheets';
+                badge.className = 'text-[11px] text-emerald-400 font-medium';
+                syncIcon.className = 'fa-solid fa-cloud-arrow-down';
+                updateDashboard();
+
+            } catch (err) {
+                console.error(err);
+                badge.textContent = 'Error al sincronizar (Verifica conexión)';
+                badge.className = 'text-[11px] text-rose-400 font-medium';
+                syncIcon.className = 'fa-solid fa-cloud-arrow-down';
             }
-            if (entry || row.length > 0) {
-                row.push(entry);
-                if (row.some(c => c.trim() !== '')) lines.push(row);
-            }
-            return lines;
         }
 
         function getFilteredData() {
@@ -527,7 +521,7 @@
                 if (almacen !== 'TODOS' && d.almacen !== almacen) return false;
                 if (categoria !== 'TODOS' && d.categoria !== categoria) return false;
                 
-                if (excludeInternas && d.hoja === 'U26 Detalle Servicio' && String(d.tipoV || '').trim().toLowerCase() === 'interna') {
+                if (excludeInternas && d.hoja === 'Servicio' && String(d.tipoV || '').trim().toLowerCase() === 'interna') {
                     return false;
                 }
 
@@ -559,7 +553,7 @@
             let ventaTot = 0, costoTot = 0;
 
             filtered.forEach(d => {
-                if (d.hoja === '175 Existencias' || d.hoja === 'Clasificacion') return;
+                if (d.hoja === 'Existencias' || d.hoja === '175 Existencias' || d.hoja === 'Clasificacion') return;
 
                 const v = Number(d.venta) || 0;
                 const c = Number(d.costo) || 0;
@@ -582,15 +576,15 @@
             });
 
             document.getElementById('kpiRefaccionesTaller').textContent = formatCurrency(ventaRefTaller);
-            document.getElementById('kpiRefTallerCosto').textContent = `Costo Ref: ${formatCurrency(costoRefTaller)} `;
+            document.getElementById('kpiRefTallerCosto').textContent = `Costo Ref: ${formatCurrency(costoRefTaller)}`;
 
             document.getElementById('kpiRefaccionesMostrador').textContent = formatCurrency(ventaRefMostrador);
-            document.getElementById('kpiRefMostradorCosto').textContent = `Costo: ${formatCurrency(costoRefMostrador)} `;
+            document.getElementById('kpiRefMostradorCosto').textContent = `Costo: ${formatCurrency(costoRefMostrador)}`;
 
             document.getElementById('kpiManoObra').textContent = formatCurrency(ventaManoObra);
 
             document.getElementById('kpiTot').textContent = formatCurrency(ventaTot);
-            document.getElementById('kpiTotCosto').textContent = `Costo T.O.T: ${formatCurrency(costoTot)} `;
+            document.getElementById('kpiTotCosto').textContent = `Costo T.O.T: ${formatCurrency(costoTot)}`;
 
             renderCharts(filtered);
             renderResumenTable(filtered);
@@ -604,13 +598,12 @@
                 ? [...new Set(masterData.map(d => d.almacen || 'VERACRUZ'))]
                 : [selectedAlmacen];
 
-            // 1. GRAFICA VENTA POR CATEGORIA OPERATIVA
             const dataRefacciones = [];
             const dataManoObra = [];
             const dataTot = [];
 
             almacenes.forEach(alm => {
-                const almData = filteredData.filter(d => (d.almacen || 'VERACRUZ') === alm && d.hoja !== '175 Existencias' && d.hoja !== 'Clasificacion');
+                const almData = filteredData.filter(d => (d.almacen || 'VERACRUZ') === alm && d.hoja !== 'Existencias' && d.hoja !== '175 Existencias' && d.hoja !== 'Clasificacion');
                 let sumRef = 0, sumMO = 0, sumTot = 0;
 
                 almData.forEach(d => {
@@ -632,70 +625,92 @@
             createOrUpdateChart('chartCategorias', 'bar', {
                 labels: almacenes,
                 datasets: [
-                    {
-                        label: 'Refacciones (Total)',
-                        data: dataRefacciones,
-                        backgroundColor: '#38bdf8',
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Mano de Obra',
-                        data: dataManoObra,
-                        backgroundColor: '#10b981',
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'T.O.T',
-                        data: dataTot,
-                        backgroundColor: '#f97316',
-                        borderRadius: 4
-                    }
+                    { label: 'Refacciones (Total)', data: dataRefacciones, backgroundColor: '#38bdf8', borderRadius: 4 },
+                    { label: 'Mano de Obra', data: dataManoObra, backgroundColor: '#10b981', borderRadius: 4 },
+                    { label: 'T.O.T', data: dataTot, backgroundColor: '#f97316', borderRadius: 4 }
                 ]
             }, {
                 plugins: {
                     legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } },
                     datalabels: {
-                        anchor: 'center',
-                        align: 'center',
-                        color: '#ffffff',
-                        font: { weight: 'bold', size: 10 },
+                        anchor: 'center', 
+                        align: 'center', 
+                        color: '#0b0f19',
+                        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                        borderRadius: 4,
+                        padding: { top: 3, bottom: 3, left: 5, right: 5 },
+                        font: { weight: 'bold', size: 9 },
                         formatter: (v) => v > 0 ? formatCurrency(v) : ''
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    label += formatCurrency(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
                     }
                 },
                 scales: {
-                    y: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { 
+                        stacked: true, 
+                        ticks: { 
+                            color: '#94a3b8',
+                            callback: function(value) { return formatCurrency(value); }
+                        }, 
+                        grid: { color: 'rgba(255,255,255,0.05)' } 
+                    },
                     x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { display: false } }
                 }
             });
 
-            // 2. GRAFICA INDEPENDIENTE: VALOR STOCK POR ALMACEN (DESDE HOJA: 175 Existencias)
             const stockValues = almacenes.map(alm => {
                 return masterData
-                    .filter(d => (d.hoja === '175 Existencias' || d.hoja === 'Clasificacion') && (d.almacen || 'VERACRUZ') === alm)
+                    .filter(d => (d.hoja === 'Existencias' || d.hoja === '175 Existencias' || d.hoja === 'Clasificacion') && (d.almacen || 'VERACRUZ') === alm)
                     .reduce((acc, curr) => acc + (Number(curr.venta) || 0), 0);
             });
 
             createOrUpdateChart('chartStockAlmacen', 'bar', {
                 labels: almacenes,
-                datasets: [{
-                    label: 'Valor Stock',
-                    data: stockValues,
-                    backgroundColor: '#10b981',
-                    borderRadius: 6
-                }]
+                datasets: [{ label: 'Valor Stock', data: stockValues, backgroundColor: '#10b981', borderRadius: 6 }]
             }, {
                 plugins: {
                     legend: { display: false },
                     datalabels: {
-                        anchor: 'end',
-                        align: 'top',
-                        color: '#34d399',
+                        anchor: 'center', 
+                        align: 'center', 
+                        color: '#0b0f19',
+                        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                        borderRadius: 4,
+                        padding: { top: 4, bottom: 4, left: 6, right: 6 },
                         font: { weight: 'bold', size: 11 },
                         formatter: (v) => v > 0 ? formatCurrency(v) : ''
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    label += formatCurrency(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
                     }
                 },
                 scales: {
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { 
+                        ticks: { 
+                            color: '#94a3b8',
+                            callback: function(value) { return formatCurrency(value); }
+                        }, 
+                        grid: { color: 'rgba(255,255,255,0.05)' } 
+                    },
                     x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
                 }
             });
@@ -718,7 +733,7 @@
             let totVTot = 0, totCTot = 0;
 
             almacenes.forEach(alm => {
-                const almData = filteredData.filter(d => (d.almacen || 'VERACRUZ') === alm && d.hoja !== '175 Existencias' && d.hoja !== 'Clasificacion');
+                const almData = filteredData.filter(d => (d.almacen || 'VERACRUZ') === alm && d.hoja !== 'Existencias' && d.hoja !== '175 Existencias' && d.hoja !== 'Clasificacion');
 
                 let vRefTaller = 0, cRefTaller = 0;
                 let vRefMostrador = 0, cRefMostrador = 0;
@@ -730,16 +745,13 @@
                     const c = Number(d.costo) || 0;
 
                     if (d.categoria === 'REFACCIONES TALLER') {
-                        vRefTaller += v;
-                        cRefTaller += c;
+                        vRefTaller += v; cRefTaller += c;
                     } else if (d.categoria === 'REFACCIONES MOSTRADOR') {
-                        vRefMostrador += v;
-                        cRefMostrador += c;
+                        vRefMostrador += v; cRefMostrador += c;
                     } else if (d.categoria === 'MANO DE OBRA') {
                         vMO += v;
                     } else if (d.categoria === 'T.O.T') {
-                        vTot += v;
-                        cTot += c;
+                        vTot += v; cTot += c;
                     }
                 });
 
@@ -814,30 +826,23 @@
 
             const selectedAlmacen = document.getElementById('selAlmacen').value;
 
-            let totVeracruz = 0;
-            let totPuebla = 0;
-            let totOaxaca = 0;
-            let totGlobal = 0;
+            let totPuebla = 0, totOaxaca = 0, totVeracruz = 0, totGlobal = 0;
 
             resumenClasData.forEach(row => {
                 const clas = row.clasificacion;
-                const vVer = selectedAlmacen === 'TODOS' || selectedAlmacen === 'VERACRUZ' ? Number(row.veracruz) || 0 : 0;
                 const vPue = selectedAlmacen === 'TODOS' || selectedAlmacen === 'PUEBLA' ? Number(row.puebla) || 0 : 0;
                 const vOax = selectedAlmacen === 'TODOS' || selectedAlmacen === 'OAXACA' ? Number(row.oaxaca) || 0 : 0;
+                const vVer = selectedAlmacen === 'TODOS' || selectedAlmacen === 'VERACRUZ' ? Number(row.veracruz) || 0 : 0;
+                const rowTotal = vPue + vOax + vVer;
 
-                const rowTotal = vVer + vPue + vOax;
-
-                totVeracruz += vVer;
-                totPuebla += vPue;
-                totOaxaca += vOax;
-                totGlobal += rowTotal;
+                totPuebla += vPue; totOaxaca += vOax; totVeracruz += vVer; totGlobal += rowTotal;
 
                 tbody.innerHTML += `
                     <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
                         <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
-                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vVer)}</td>
                         <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vPue)}</td>
                         <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vOax)}</td>
+                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vVer)}</td>
                         <td class="px-3 py-2.5 text-right font-mono font-bold text-emerald-400">${formatCurrency(rowTotal)}</td>
                     </tr>
                 `;
@@ -846,9 +851,9 @@
             tfoot.innerHTML = `
                 <tr>
                     <td class="px-3 py-3 text-amber-400 font-extrabold text-sm uppercase">TOTAL GENERAL</td>
-                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totVeracruz)}</td>
                     <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totPuebla)}</td>
                     <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totOaxaca)}</td>
+                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totVeracruz)}</td>
                     <td class="px-3 py-3 text-right font-mono text-emerald-400 font-black">${formatCurrency(totGlobal)}</td>
                 </tr>
             `;
@@ -864,22 +869,10 @@
             if (typeof val === 'number') return val;
             if (!val) return 0;
             const strVal = String(val).trim();
-            
-            let isNegative = false;
-            if (strVal.startsWith('(') && strVal.endsWith(')')) {
-                isNegative = true;
-            } else if (strVal.startsWith('-')) {
-                isNegative = true;
-            }
-
+            let isNegative = strVal.startsWith('(') && strVal.endsWith(')') || strVal.startsWith('-');
             const cleaned = strVal.replace(/[^0-9.-]+/g, "");
             let num = parseFloat(cleaned);
-            if (isNaN(num)) return 0;
-
-            if (isNegative) {
-                num = -Math.abs(num);
-            }
-            return num;
+            return isNaN(num) ? 0 : (isNegative ? -Math.abs(num) : num);
         }
 
         function getValByExactNames(row, exactNames) {
@@ -888,9 +881,7 @@
                 const normTarget = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
                 for (let k of keys) {
                     const normK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-                    if (normK === normTarget) {
-                        return parseNum(row[k]);
-                    }
+                    if (normK === normTarget) return parseNum(row[k]);
                 }
             }
             return 0;
@@ -902,9 +893,7 @@
                 const normTarget = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
                 for (let k of keys) {
                     const normK = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-                    if (normK === normTarget) {
-                        return String(row[k] || '').trim();
-                    }
+                    if (normK === normTarget) return String(row[k] || '').trim();
                 }
             }
             return '';
@@ -946,9 +935,9 @@
                     
                     const sLower = sheetName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-                    const isU26 = sLower.includes('u26') || sLower.includes('detalle servicio');
-                    const isU931 = sLower.includes('u931') || sLower.includes('detalle refacciones');
-                    const isExistencias = sLower.includes('175') || sLower.includes('existencias');
+                    const isServicio = sLower.includes('servicio') || sLower.includes('u26');
+                    const isMostrador = sLower.includes('mostrador') || sLower.includes('u931');
+                    const isExistencias = sLower.includes('existencias') || sLower.includes('175');
                     const isResumenclas = sLower.includes('resumenclas') || sLower.includes('resumen clas');
 
                     if (isResumenclas) {
@@ -958,25 +947,19 @@
                                 let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER']);
                                 let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE']);
                                 let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX']);
-
-                                parsedResumenclas.push({
-                                    clasificacion,
-                                    veracruz,
-                                    puebla,
-                                    oaxaca
-                                });
+                                parsedResumenclas.push({ clasificacion, veracruz, puebla, oaxaca });
                             }
                         });
                         return;
                     }
 
-                    if (!isU26 && !isU931 && !isExistencias) return;
+                    if (!isServicio && !isMostrador && !isExistencias) return;
 
                     json.forEach((row) => {
                         let almacen = detectAlmacen(row, sheetName);
                         let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
 
-                        if (isU26) {
+                        if (isServicio) {
                             let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones']);
                             let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef']);
                             let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra']);
@@ -984,67 +967,27 @@
                             let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT']);
 
                             if (refVenta !== 0 || refCosto !== 0) {
-                                parsedRows.push({ 
-                                    almacen,
-                                    hoja: 'U26 Detalle Servicio', 
-                                    categoria: 'REFACCIONES TALLER', 
-                                    concepto: 'Refacción Taller Servicio (Col: Vta. Ref)', 
-                                    venta: refVenta, 
-                                    costo: refCosto,
-                                    tipoV 
-                                });
+                                parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Refacción Taller Servicio', venta: refVenta, costo: refCosto, tipoV });
                             }
                             if (manoObraVenta !== 0) {
-                                parsedRows.push({ 
-                                    almacen,
-                                    hoja: 'U26 Detalle Servicio', 
-                                    categoria: 'MANO DE OBRA', 
-                                    concepto: 'Mano de Obra (Col: ImpMO)', 
-                                    venta: manoObraVenta, 
-                                    costo: 0,
-                                    tipoV 
-                                });
+                                parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: manoObraVenta, costo: 0, tipoV });
                             }
                             if (totVenta !== 0 || totCosto !== 0) {
-                                parsedRows.push({ 
-                                    almacen,
-                                    hoja: 'U26 Detalle Servicio', 
-                                    categoria: 'T.O.T', 
-                                    concepto: 'Trabajos Fuera de Taller (Col: T.O.T)', 
-                                    venta: totVenta, 
-                                    costo: totCosto,
-                                    tipoV 
-                                });
+                                parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: totVenta, costo: totCosto, tipoV });
                             }
-                        } else if (isU931) {
+                        } else if (isMostrador) {
                             let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal']);
                             let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref']);
-                            let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador (Col: Refacciones)').trim();
+                            let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador').trim();
 
                             if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
-                                parsedRows.push({ 
-                                    almacen,
-                                    hoja: 'U931 Detalle Refacciones', 
-                                    categoria: 'REFACCIONES MOSTRADOR', 
-                                    concepto, 
-                                    venta: refMostradorVenta, 
-                                    costo: refMostradorCosto,
-                                    tipoV: '' 
-                                });
+                                parsedRows.push({ almacen, hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto, venta: refMostradorVenta, costo: refMostradorCosto, tipoV: '' });
                             }
                         } else if (isExistencias) {
-                            let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor']);
-                            let concepto = String(row.Concepto || row.Descripcion || row.Almacen || row.Almacén || 'Inventario Stock Refacciones').trim();
+                            let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor', 'Existencias']);
+                            let concepto = String(row.Concepto || row.Descripcion || row.Almacen || 'Inventario Stock').trim();
                             if (inventarioVenta !== 0) {
-                                parsedRows.push({
-                                    almacen,
-                                    hoja: '175 Existencias',
-                                    categoria: 'STOCK',
-                                    concepto: `Existencias: ${concepto}`,
-                                    venta: inventarioVenta,
-                                    costo: 0,
-                                    tipoV: ''
-                                });
+                                parsedRows.push({ almacen, hoja: 'Existencias', categoria: 'STOCK', concepto: `Existencias: ${concepto}`, venta: inventarioVenta, costo: 0, tipoV: '' });
                             }
                         }
                     });
