@@ -230,11 +230,16 @@
                         <table class="w-full text-left text-xs" style="color: var(--text-main);">
                             <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
                                 <tr>
-                                    <th class="px-3 py-3">Almacén</th>
-                                    <th class="px-3 py-3 text-right">Servicio<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
-                                    <th class="px-3 py-3 text-right">Mostrador<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
-                                    <th class="px-3 py-3 text-right">Mano Obra<br><span class="text-[10px] font-normal lowercase">(Venta)</span></th>
-                                    <th class="px-3 py-3 text-right">T.O.T<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                    <th rowspan="2" class="px-3 py-2.5 align-middle border-r" style="border-color: var(--table-border);">Almacén</th>
+                                    <th colspan="2" class="px-3 py-1.5 text-center border-b border-r font-extrabold tracking-wider" style="border-color: var(--table-border); color: var(--text-main);">
+                                        <i class="fa-solid fa-gears text-xs mr-1"></i>Refacciones
+                                    </th>
+                                    <th rowspan="2" class="px-3 py-2.5 text-right align-middle border-r" style="border-color: var(--table-border);">Mano Obra<br><span class="text-[10px] font-normal lowercase">(Venta)</span></th>
+                                    <th rowspan="2" class="px-3 py-2.5 text-right align-middle">T.O.T<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                </tr>
+                                <tr>
+                                    <th class="px-3 py-2 text-right border-r" style="border-color: var(--table-border);">Servicio<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
+                                    <th class="px-3 py-2 text-right border-r" style="border-color: var(--table-border);">Mostrador<br><span class="text-[10px] font-normal lowercase">(Vta / Costo / Util)</span></th>
                                 </tr>
                             </thead>
                             <tbody id="tblResumenBody" class="divide-y font-medium" style="border-color: var(--table-border);">
