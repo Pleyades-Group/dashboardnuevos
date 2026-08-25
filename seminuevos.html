@@ -182,9 +182,8 @@
                     <div class="relative h-60 w-full">
                         <canvas id="chartEmpresa"></canvas>
                     </div>
-                    <!-- Resumen Estilo Dashboard Nuevos (Grid de Tarjetas por Empresa) -->
+                    <!-- Resumen Estilo Dashboard Nuevos -->
                     <div id="barChartSummary" class="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto" style="border-color: var(--table-border);">
-                        <!-- Inyectado dinámicamente -->
                     </div>
                 </div>
             </div>
@@ -201,7 +200,6 @@
                         </div>
                     </div>
                     <div id="donasContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Se inyectan dinámicamente -->
                     </div>
                 </div>
             </div>
@@ -249,8 +247,10 @@
         Chart.register(ChartDataLabels);
 
         let currentData = [
-            { empresa: 'VERACRUZ', vendedor: 'JUAN PEREZ', cantidad: 1, marca: 'SUBARU', modelo: 'OUTBACK', ano: 2022, pCompra: 420000, subtotal: 480000 },
-            { empresa: 'PUEBLA', vendedor: 'MARIA LOPEZ', cantidad: 2, marca: 'TOYOTA', modelo: 'RAV4', ano: 2023, pCompra: 510000, subtotal: 620000 }
+            { empresa: 'SUBARU PUEBLA', vendedor: 'JUAN PEREZ', cantidad: 1, marca: 'SUBARU', modelo: 'CROSSTREK 2.0i DYNAMIC CVT', ano: 2025, pCompra: 301724.14, subtotal: 362068.97 },
+            { empresa: 'SUBARU VERACRUZ', vendedor: 'MARIA LOPEZ', cantidad: 1, marca: 'TOYOTA', modelo: 'RAV4 4 GASOLINA 5P SUV SE', ano: 2017, pCompra: 210000, subtotal: 260000 },
+            { empresa: 'SUBARU VERACRUZ', vendedor: 'MARIA LOPEZ', cantidad: 1, marca: 'NISSAN', modelo: 'KICKS EXCLUSIVE 4 GASOLINA 5P SUV', ano: 2021, pCompra: 195000, subtotal: 240034.48 },
+            { empresa: 'SUBARU VERACRUZ', vendedor: 'PEDRO GOMEZ', cantidad: 1, marca: 'SUZUKI', modelo: 'SCROSS GLX', ano: 2022, pCompra: 169291.94, subtotal: 206000 }
         ];
         let charts = {};
         const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ-ZvwkZhoozTMicDSsYnN5m0fPt4Q69JHRrOt5NKN79yPdj1NMnlx8U-8sQmZqyw/pub?gid=1608466117&single=true&output=csv';
@@ -260,13 +260,19 @@
         const MARCA_COLORS = {
             'SUBARU': '#38bdf8',
             'TOYOTA': '#34d399',
-            'HONDA': '#f97316',
             'NISSAN': '#818cf8',
+            'SUZUKI': '#fb923c',
+            'HONDA': '#f97316',
             'MAZDA': '#f43f5e',
             'KIA': '#fbbf24',
             'VOLKSWAGEN': '#c86d51',
-            'CHEVROLET': '#a855f7'
+            'CHEVROLET': '#a855f7',
+            'FORD': '#60a5fa',
+            'HYUNDAI': '#06b6d4',
+            'BMW': '#22d3ee'
         };
+
+        const fallbackPalette = ['#38bdf8', '#818cf8', '#34d399', '#fb923c', '#fbbf24', '#f43f5e', '#a855f7', '#06b6d4'];
 
         document.addEventListener('DOMContentLoaded', () => {
             initThemeToggle();
@@ -652,8 +658,6 @@
                 return a.localeCompare(b);
             });
 
-            const fallbackPalette = ['#38bdf8', '#818cf8', '#c86d51', '#34d399', '#fbbf24', '#f43f5e'];
-
             empresas.forEach((empresa, idx) => {
                 const itemsEmpresa = empresasMap[empresa];
                 
@@ -664,10 +668,15 @@
 
                 const labelsMarca = Object.keys(marcaMap);
                 const valuesMarca = labelsMarca.map(l => marcaMap[l]);
-                const brandColors = labelsMarca.map((marca, mIdx) => {
+                
+                // Mapeo idéntico 1:1 entre etiqueta de marca y color
+                const brandColorMap = {};
+                labelsMarca.forEach((marca, mIdx) => {
                     const mUpper = marca.toUpperCase();
-                    return MARCA_COLORS[mUpper] || fallbackPalette[mIdx % fallbackPalette.length];
+                    brandColorMap[marca] = MARCA_COLORS[mUpper] || fallbackPalette[mIdx % fallbackPalette.length];
                 });
+
+                const brandColors = labelsMarca.map(marca => brandColorMap[marca]);
 
                 const canvasId = `donaCanvas_${idx}`;
 
@@ -683,11 +692,11 @@
                 });
 
                 Object.values(detalleMap).forEach(det => {
-                    const colorDot = MARCA_COLORS[det.marca.toUpperCase()] || '#38bdf8';
+                    const colorDot = brandColorMap[det.marca] || MARCA_COLORS[det.marca.toUpperCase()] || '#38bdf8';
                     summaryHtml += `
                         <div class="flex justify-between items-center py-1.5 px-2 rounded bg-slate-500/10 border border-slate-700/30 gap-1.5">
                             <span class="flex items-center gap-1.5 truncate" style="color: var(--text-main);" title="${det.marca} ${det.modelo} (${det.ano})">
-                                <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style="background-color: ${colorDot};"></span>
+                                <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0 shadow-sm" style="background-color: ${colorDot};"></span>
                                 <span class="font-extrabold uppercase tracking-tight">${det.marca}</span> 
                                 <span class="font-medium truncate" style="color: var(--text-muted);">${det.modelo}</span>
                                 <span class="text-xs px-1.5 py-0.5 rounded-md font-mono font-bold bg-sky-950/85 text-sky-300 border border-sky-700/50 flex-shrink-0">${det.ano}</span>
