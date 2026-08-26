@@ -331,32 +331,9 @@
             resumenclas: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=132782580&single=true&output=csv'
         };
 
-        let masterData = [
-            { almacen: 'VERACRUZ', hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 125000, costo: 87500, tipoV: 'Cliente' },
-            { almacen: 'VERACRUZ', hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 95000, costo: 0, tipoV: 'Cliente' },
-            { almacen: 'VERACRUZ', hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 32000, costo: 21000, tipoV: 'Interna' },
-            { almacen: 'VERACRUZ', hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 142000, costo: 99400, tipoV: '' },
-            { almacen: 'VERACRUZ', hoja: 'Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 450000, costo: 0, tipoV: '' },
-            
-            { almacen: 'PUEBLA', hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 110000, costo: 77000, tipoV: 'Cliente' },
-            { almacen: 'PUEBLA', hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 82000, costo: 0, tipoV: 'Interna' },
-            { almacen: 'PUEBLA', hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 25000, costo: 16000, tipoV: 'Cliente' },
-            { almacen: 'PUEBLA', hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 115000, costo: 80500, tipoV: '' },
-            { almacen: 'PUEBLA', hoja: 'Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 380000, costo: 0, tipoV: '' },
+        let masterData = [];
 
-            { almacen: 'OAXACA', hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Venta Refacciones Taller (Vta. Ref)', venta: 84000, costo: 58800, tipoV: 'Cliente' },
-            { almacen: 'OAXACA', hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: 61000, costo: 0, tipoV: 'Cliente' },
-            { almacen: 'OAXACA', hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: 18000, costo: 12500, tipoV: 'Interna' },
-            { almacen: 'OAXACA', hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto: 'Refacciones Mostrador', venta: 91000, costo: 63700, tipoV: '' },
-            { almacen: 'OAXACA', hoja: 'Existencias', categoria: 'STOCK', concepto: 'Existencias: Valor Stock', venta: 290000, costo: 0, tipoV: '' }
-        ];
-
-        let resumenClasData = [
-            { clasificacion: 'A', veracruz: 220000, puebla: 180000, oaxaca: 140000 },
-            { clasificacion: 'B', veracruz: 150000, puebla: 120000, oaxaca: 90000 },
-            { clasificacion: 'C', veracruz: 80000, puebla: 60000, oaxaca: 40000 },
-            { clasificacion: 'D', veracruz: 0, puebla: 20000, oaxaca: 20000 }
-        ];
+        let resumenClasData = [];
 
         let charts = {};
 
