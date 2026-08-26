@@ -320,7 +320,10 @@
     <script>
         Chart.register(ChartDataLabels);
 
-        // GOOGLE SHEETS CSV URL CONFIGURATION CONSTANTS
+        // GOOGLE APPS SCRIPT WEB APP URL (PEGA AQUÍ TU URL CON TERMINACIÓN /exec)
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXKToH_z5tlxtSu32OSCNelIcj9Rg3MqCNqkBKe9uBi9kOkZeMh7sYqF9OY7K3AFkO/exec'; 
+
+        // GOOGLE SHEETS CSV URL CONFIGURATION CONSTANTS (RESPALDO EN CASO DE ERROR/TIMEOUT)
         const GOOGLE_SHEETS_CSV_URL = {
             servicio: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=1841737790&single=true&output=csv',
             mostrador: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=1921079646&single=true&output=csv',
@@ -360,6 +363,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initThemeToggle();
             setupEventListeners();
+            updateDashboard();
             fetchGoogleSheetsData();
         });
 
@@ -398,12 +402,10 @@
             document.getElementById('chkExcludeInternas').addEventListener('change', updateDashboard);
             document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
 
-            // Google Sheets Direct Sync Button
             document.getElementById('btnGoogleSheetsSync').onclick = () => {
                 fetchGoogleSheetsData();
             };
 
-            // Excel Upload Modal
             const uploadModal = document.getElementById('mdlUpload');
             document.getElementById('btnUploadModal').onclick = () => uploadModal.classList.remove('hidden');
             document.getElementById('btnCloseModal').onclick = () => uploadModal.classList.add('hidden');
@@ -414,7 +416,84 @@
             fileInput.onchange = (e) => handleExcelUpload(e.target.files[0]);
         }
 
-        // FETCH GOOGLE SHEETS LIVE DATA VIA CSV URLs
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 5000 } = options;
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, {
+                    ...options,
+                    signal: controller.signal
+                });
+                return response;
+            } finally {
+                clearTimeout(id);
+            }
+        }
+
+        function processServicioRows(rows, targetArr) {
+            if (!Array.isArray(rows)) return;
+            rows.forEach(row => {
+                let almacen = detectAlmacen(row, 'Servicio');
+                let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
+
+                let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones', 'ventaRef']);
+                let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef', 'costoRef']);
+                let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra', 'impMO']);
+                let totVenta = getValByExactNames(row, ['T.O.T', 'TOT', 'T O T', 'totVenta']);
+                let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT', 'costoTot']);
+
+                if (refVenta !== 0 || refCosto !== 0) {
+                    targetArr.push({ almacen, hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Refacción Taller Servicio', venta: refVenta, costo: refCosto, tipoV });
+                }
+                if (manoObraVenta !== 0) {
+                    targetArr.push({ almacen, hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: manoObraVenta, costo: 0, tipoV });
+                }
+                if (totVenta !== 0 || totCosto !== 0) {
+                    targetArr.push({ almacen, hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: totVenta, costo: totCosto, tipoV });
+                }
+            });
+        }
+
+        function processMostradorRows(rows, targetArr) {
+            if (!Array.isArray(rows)) return;
+            rows.forEach(row => {
+                let almacen = detectAlmacen(row, 'Mostrador');
+                let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal', 'venta']);
+                let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref', 'costo']);
+                let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador').trim();
+
+                if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
+                    targetArr.push({ almacen, hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto, venta: refMostradorVenta, costo: refMostradorCosto, tipoV: '' });
+                }
+            });
+        }
+
+        function processExistenciasRows(rows, targetArr) {
+            if (!Array.isArray(rows)) return;
+            rows.forEach(row => {
+                let almacen = detectAlmacen(row, 'Existencias');
+                let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor', 'Existencias', 'valorStock']);
+                let concepto = String(row.Concepto || row.Descripcion || row.Almacen || 'Inventario Stock').trim();
+                if (inventarioVenta !== 0) {
+                    targetArr.push({ almacen, hoja: 'Existencias', categoria: 'STOCK', concepto: `Existencias: ${concepto}`, venta: inventarioVenta, costo: 0, tipoV: '' });
+                }
+            });
+        }
+
+        function processResumenclasRows(rows, targetArr) {
+            if (!Array.isArray(rows)) return;
+            rows.forEach(row => {
+                let clasificacion = getStringValByExactNames(row, ['Clasificacion', 'Clasificación', 'Clasif', 'Clase', 'clasificacion']);
+                if (clasificacion) {
+                    let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER', 'veracruz']);
+                    let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE', 'puebla']);
+                    let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX', 'oaxaca']);
+                    targetArr.push({ clasificacion, veracruz, puebla, oaxaca });
+                }
+            });
+        }
+
         async function fetchGoogleSheetsData() {
             const badge = document.getElementById('syncStatusBadge');
             const syncIcon = document.getElementById('syncIcon');
@@ -424,96 +503,104 @@
 
             let newRows = [];
             let newResumenClas = [];
+            let fetchedViaAppsScript = false;
+            let errorMessage = '';
 
             try {
-                // Fetch Servicio
-                if (GOOGLE_SHEETS_CSV_URL.servicio) {
-                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.servicio);
-                    const csvText = await res.text();
-                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-                    parsed.data.forEach(row => {
-                        let almacen = detectAlmacen(row, 'Servicio');
-                        let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
+                // 1. Intentar cargar mediante Apps Script Web App JSON
+                const url = GOOGLE_APPS_SCRIPT_URL ? GOOGLE_APPS_SCRIPT_URL.trim() : '';
+                const isPlaceholder = !url || url.includes('AQUÍ_TU_URL');
 
-                        let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones']);
-                        let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef']);
-                        let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra']);
-                        let totVenta = getValByExactNames(row, ['T.O.T', 'TOT', 'T O T']);
-                        let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT']);
+                if (!isPlaceholder) {
+                    try {
+                        const response = await fetchWithTimeout(url, { timeout: 6000, redirect: 'follow' });
+                        if (response.ok) {
+                            const jsonResult = await response.json();
+                            
+                            if (jsonResult && typeof jsonResult === 'object') {
+                                if (jsonResult.Servicio || jsonResult.servicio) processServicioRows(jsonResult.Servicio || jsonResult.servicio, newRows);
+                                if (jsonResult.Mostrador || jsonResult.mostrador) processMostradorRows(jsonResult.Mostrador || jsonResult.mostrador, newRows);
+                                if (jsonResult.Existencias || jsonResult.existencias) processExistenciasRows(jsonResult.Existencias || jsonResult.existencias, newRows);
+                                if (jsonResult.Resumenclas || jsonResult.resumenclas) processResumenclasRows(jsonResult.Resumenclas || jsonResult.resumenclas, newResumenClas);
+                                
+                                if (Array.isArray(jsonResult.data)) {
+                                    processServicioRows(jsonResult.data, newRows);
+                                    processMostradorRows(jsonResult.data, newRows);
+                                    processExistenciasRows(jsonResult.data, newRows);
+                                    processResumenclasRows(jsonResult.data, newResumenClas);
+                                }
+                            }
 
-                        if (refVenta !== 0 || refCosto !== 0) {
-                            newRows.push({ almacen, hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Refacción Taller Servicio', venta: refVenta, costo: refCosto, tipoV });
+                            if (newRows.length > 0 || newResumenClas.length > 0) {
+                                fetchedViaAppsScript = true;
+                            }
+                        } else {
+                            errorMessage = `Apps Script devolvió estado HTTP ${response.status}`;
                         }
-                        if (manoObraVenta !== 0) {
-                            newRows.push({ almacen, hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: manoObraVenta, costo: 0, tipoV });
-                        }
-                        if (totVenta !== 0 || totCosto !== 0) {
-                            newRows.push({ almacen, hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: totVenta, costo: totCosto, tipoV });
-                        }
-                    });
+                    } catch (appsScriptErr) {
+                        console.warn('Apps Script no respondió a tiempo o bloqueo CORS:', appsScriptErr);
+                        errorMessage = 'Error de conexión o permisos en Apps Script.';
+                    }
                 }
 
-                // Fetch Mostrador
-                if (GOOGLE_SHEETS_CSV_URL.mostrador) {
-                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.mostrador);
-                    const csvText = await res.text();
-                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-                    parsed.data.forEach(row => {
-                        let almacen = detectAlmacen(row, 'Mostrador');
-                        let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal']);
-                        let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref']);
-                        let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador').trim();
+                // 2. Fallback: Descarga mediante CSV si Apps Script no obtuvo datos
+                if (!fetchedViaAppsScript) {
+                    const csvPromises = [];
+                    const keys = ['servicio', 'mostrador', 'existencias', 'resumenclas'];
 
-                        if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
-                            newRows.push({ almacen, hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto, venta: refMostradorVenta, costo: refMostradorCosto, tipoV: '' });
+                    keys.forEach(k => {
+                        if (GOOGLE_SHEETS_CSV_URL[k]) {
+                            csvPromises.push(
+                                fetchWithTimeout(GOOGLE_SHEETS_CSV_URL[k], { timeout: 5000 })
+                                    .then(res => res.ok ? res.text() : Promise.reject(`HTTP ${res.status}`))
+                                    .then(csvText => {
+                                        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+                                        return { key: k, data: parsed.data };
+                                    })
+                                    .catch(err => {
+                                        console.warn(`Error al cargar CSV ${k}:`, err);
+                                        return { key: k, data: null };
+                                    })
+                            );
                         }
                     });
+
+                    if (csvPromises.length > 0) {
+                        const results = await Promise.allSettled(csvPromises);
+                        results.forEach(res => {
+                            if (res.status === 'fulfilled' && res.value && res.value.data) {
+                                const { key, data } = res.value;
+                                if (key === 'servicio') processServicioRows(data, newRows);
+                                if (key === 'mostrador') processMostradorRows(data, newRows);
+                                if (key === 'existencias') processExistenciasRows(data, newRows);
+                                if (key === 'resumenclas') processResumenclasRows(data, newResumenClas);
+                            }
+                        });
+                    }
                 }
 
-                // Fetch Existencias
-                if (GOOGLE_SHEETS_CSV_URL.existencias) {
-                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.existencias);
-                    const csvText = await res.text();
-                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-                    parsed.data.forEach(row => {
-                        let almacen = detectAlmacen(row, 'Existencias');
-                        let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor', 'Existencias']);
-                        let concepto = String(row.Concepto || row.Descripcion || row.Almacen || 'Inventario Stock').trim();
-                        if (inventarioVenta !== 0) {
-                            newRows.push({ almacen, hoja: 'Existencias', categoria: 'STOCK', concepto: `Existencias: ${concepto}`, venta: inventarioVenta, costo: 0, tipoV: '' });
-                        }
-                    });
-                }
-
-                // Fetch Resumenclas
-                if (GOOGLE_SHEETS_CSV_URL.resumenclas) {
-                    const res = await fetch(GOOGLE_SHEETS_CSV_URL.resumenclas);
-                    const csvText = await res.text();
-                    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-                    parsed.data.forEach(row => {
-                        let clasificacion = getStringValByExactNames(row, ['Clasificacion', 'Clasificación', 'Clasif', 'Clase']);
-                        if (clasificacion) {
-                            let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER']);
-                            let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE']);
-                            let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX']);
-                            newResumenClas.push({ clasificacion, veracruz, puebla, oaxaca });
-                        }
-                    });
-                }
-
+                // 3. Actualizar modelo global
                 if (newRows.length > 0) masterData = newRows;
                 if (newResumenClas.length > 0) resumenClasData = newResumenClas;
 
-                badge.textContent = 'Sincronizado correctamente con Google Sheets';
-                badge.className = 'text-[11px] text-emerald-400 font-medium';
-                syncIcon.className = 'fa-solid fa-cloud-arrow-down';
-                updateDashboard();
+                if (fetchedViaAppsScript) {
+                    badge.textContent = '⚡ Sincronizado Google Apps Script (JSON)';
+                    badge.className = 'text-[11px] text-emerald-400 font-medium';
+                } else if (newRows.length > 0) {
+                    badge.textContent = '📄 Sincronizado CSV';
+                    badge.className = 'text-[11px] text-sky-400 font-medium';
+                } else {
+                    badge.textContent = errorMessage ? `⚠️ ${errorMessage}` : '⚠️ Sin conexión a Google Sheets (Usando datos locales)';
+                    badge.className = 'text-[11px] text-amber-400 font-medium';
+                }
 
             } catch (err) {
-                console.error(err);
-                badge.textContent = 'Error al sincronizar (Verifica conexión)';
+                console.error('Error general durante la sincronización:', err);
+                badge.textContent = '⚠️ Error en la sincronización de datos';
                 badge.className = 'text-[11px] text-rose-400 font-medium';
+            } finally {
                 syncIcon.className = 'fa-solid fa-cloud-arrow-down';
+                updateDashboard();
             }
         }
 
