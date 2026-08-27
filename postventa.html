@@ -275,7 +275,7 @@
                     </div>
                     <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
                         <table class="w-full text-left text-xs" style="color: var(--text-main);">
-                            <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
+                            <thead id="tblResumenclasHead" class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
                                 <tr>
                                     <th class="px-3 py-3">Clasificación</th>
                                     <th class="px-3 py-3 text-right">PUEBLA</th>
@@ -888,6 +888,7 @@
         }
 
         function renderResumenclasTable() {
+            const thead = document.getElementById('tblResumenclasHead');
             const tbody = document.getElementById('tblResumenclasBody');
             const tfoot = document.getElementById('tblResumenclasFoot');
             tbody.innerHTML = '';
@@ -895,37 +896,88 @@
 
             const selectedAlmacen = document.getElementById('selAlmacen').value;
 
-            let totPuebla = 0, totOaxaca = 0, totVeracruz = 0, totGlobal = 0;
+            if (selectedAlmacen !== 'TODOS') {
+                if (thead) {
+                    thead.innerHTML = `
+                        <tr>
+                            <th class="px-3 py-3">Clasificación</th>
+                            <th class="px-3 py-3 text-right">${selectedAlmacen}</th>
+                        </tr>
+                    `;
+                }
 
-            resumenClasData.forEach(row => {
-                const clas = row.clasificacion;
-                const vPue = selectedAlmacen === 'TODOS' || selectedAlmacen === 'PUEBLA' ? Number(row.puebla) || 0 : 0;
-                const vOax = selectedAlmacen === 'TODOS' || selectedAlmacen === 'OAXACA' ? Number(row.oaxaca) || 0 : 0;
-                const vVer = selectedAlmacen === 'TODOS' || selectedAlmacen === 'VERACRUZ' ? Number(row.veracruz) || 0 : 0;
-                const rowTotal = vPue + vOax + vVer;
+                let totAlm = 0;
 
-                totPuebla += vPue; totOaxaca += vOax; totVeracruz += vVer; totGlobal += rowTotal;
+                resumenClasData.forEach(row => {
+                    const clas = row.clasificacion;
+                    let valAlm = 0;
+                    const sUpper = selectedAlmacen.toUpperCase();
+                    if (sUpper.includes('PUE')) valAlm = Number(row.puebla) || 0;
+                    else if (sUpper.includes('OAX')) valAlm = Number(row.oaxaca) || 0;
+                    else if (sUpper.includes('VER')) valAlm = Number(row.veracruz) || 0;
+                    else valAlm = Number(row[selectedAlmacen]) || 0;
 
-                tbody.innerHTML += `
-                    <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
-                        <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
-                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vPue)}</td>
-                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vOax)}</td>
-                        <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vVer)}</td>
-                        <td class="px-3 py-2.5 text-right font-mono font-bold text-emerald-400">${formatCurrency(rowTotal)}</td>
+                    totAlm += valAlm;
+
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
+                            <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
+                            <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(valAlm)}</td>
+                        </tr>
+                    `;
+                });
+
+                tfoot.innerHTML = `
+                    <tr>
+                        <td class="px-3 py-3 text-amber-400 font-extrabold text-sm uppercase">TOTAL GENERAL</td>
+                        <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totAlm)}</td>
                     </tr>
                 `;
-            });
+            } else {
+                if (thead) {
+                    thead.innerHTML = `
+                        <tr>
+                            <th class="px-3 py-3">Clasificación</th>
+                            <th class="px-3 py-3 text-right">PUEBLA</th>
+                            <th class="px-3 py-3 text-right">OAXACA</th>
+                            <th class="px-3 py-3 text-right">VERACRUZ</th>
+                            <th class="px-3 py-3 text-right">Total General</th>
+                        </tr>
+                    `;
+                }
 
-            tfoot.innerHTML = `
-                <tr>
-                    <td class="px-3 py-3 text-amber-400 font-extrabold text-sm uppercase">TOTAL GENERAL</td>
-                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totPuebla)}</td>
-                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totOaxaca)}</td>
-                    <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totVeracruz)}</td>
-                    <td class="px-3 py-3 text-right font-mono text-emerald-400 font-black">${formatCurrency(totGlobal)}</td>
-                </tr>
-            `;
+                let totPuebla = 0, totOaxaca = 0, totVeracruz = 0, totGlobal = 0;
+
+                resumenClasData.forEach(row => {
+                    const clas = row.clasificacion;
+                    const vPue = Number(row.puebla) || 0;
+                    const vOax = Number(row.oaxaca) || 0;
+                    const vVer = Number(row.veracruz) || 0;
+                    const rowTotal = vPue + vOax + vVer;
+
+                    totPuebla += vPue; totOaxaca += vOax; totVeracruz += vVer; totGlobal += rowTotal;
+
+                    tbody.innerHTML += `
+                        <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
+                            <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
+                            <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vPue)}</td>
+                            <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vOax)}</td>
+                            <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vVer)}</td>
+                            <td class="px-3 py-2.5 text-right font-mono font-bold text-emerald-400">${formatCurrency(rowTotal)}</td>
+                        </tr>
+                    `;
+                });
+
+                tfoot.innerHTML = `
+                    <tr>
+                        <td class="px-3 py-3 text-amber-400 font-extrabold text-sm uppercase">TOTAL GENERAL</td>
+                        <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totPuebla)}</td>
+                        <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totOaxaca)}</td>
+                        <td class="px-3 py-3 text-right font-mono text-sky-300 font-bold">${formatCurrency(totVeracruz)}</td>
+                        <td class="px-3 py-3 text-right font-mono text-emerald-400 font-black">${formatCurrency(totGlobal)}</td>
+                    </tr>
+                `;
+            }
         }
 
         function createOrUpdateChart(canvasId, type, dataConfig, customOptions = {}) {
