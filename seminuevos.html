@@ -31,7 +31,7 @@
             --panel-border: rgba(255, 255, 255, 0.08);
             --card-bg: rgba(30, 41, 59, 0.6);
             --card-border: rgba(255, 255, 255, 0.05);
-            --header-bg: rgba(15, 23, 42, 0.8);
+            --header-bg: rgba(15, 23, 42, 0.85);
             --header-border: #1e293b;
             --input-bg: #0f172a;
             --input-border: #334155;
@@ -95,31 +95,44 @@
                     <i class="fa-solid fa-car text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight flex items-center gap-2" style="color: var(--text-main);">
-                        SUBARU <span class="text-amber-400 font-medium text-sm px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/50">Seminuevos</span>
-                    </h1>
-                    <p class="text-xs" style="color: var(--text-muted);">Dashboard Ejecutivo de Ventas y Unidades Seminuevas</p>
-                </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3">
-                <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-700/60 bg-slate-800/90 text-slate-200 hover:bg-slate-700">
-                    <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
-                    <span id="themeText">Tema Claro</span>
-                </button>
-                <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold">
-                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
-                    <span>Cargar Excel</span>
-                </button>
-                <button id="btnExportExcel" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-md">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <span>Exportar Excel</span>
-                </button>
+                <h1 class="text-xl font-extrabold tracking-tight flex items-center gap-2" style="color: var(--text-main);">
+                    SUBARU <span class="text-amber-400 font-medium text-sm px-2 py-0.5 rounded-full bg-amber-950/80 border border-amber-800/50">Seminuevos</span>
+                </h1>
+                <p class="text-xs flex flex-wrap items-center gap-2 mt-0.5" style="color: var(--text-muted);">
+                    <span>Dashboard Ejecutivo de Ventas</span>
+                    <span id="syncBadge" class="hidden inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 font-mono">
+                        <i class="fa-solid fa-circle text-[6px] animate-pulse"></i> GAS Conectado
+                    </span>
+                    <span id="lastModifiedBadge" class="hidden inline-flex items-center gap-1.5 text-[10px] px-2.5 py-0.5 rounded-full bg-slate-800/90 text-amber-300 border border-amber-500/30 font-mono shadow-sm">
+                        <i class="fa-solid fa-clock text-amber-400"></i>
+                        <span>Última mod: <strong id="lblLastModified" class="font-bold text-amber-200">--</strong></span>
+                    </span>
+                </p>
             </div>
         </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
+        <div class="flex items-center gap-2 flex-wrap mt-3 md:mt-0">
+            <button id="btnGasModal" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/30 transition">
+                <i class="fa-solid fa-cloud-arrow-down"></i>
+                <span>Google Sheets</span>
+            </button>
+            <button id="btnUploadModal" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 transition">
+                <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                <span>Cargar Excel</span>
+            </button>
+            <button id="btnExportExcel" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 transition">
+                <i class="fa-solid fa-download text-amber-400"></i>
+                <span>Exportar</span>
+            </button>
+            <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 transition">
+                <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
+                <span id="themeText">Tema Claro</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
 
         <!-- FILTROS EN CASCADA -->
         <section class="glass-panel rounded-2xl p-4 shadow-xl">
@@ -182,7 +195,6 @@
                     <div class="relative h-60 w-full">
                         <canvas id="chartEmpresa"></canvas>
                     </div>
-                    <!-- Resumen Estilo Dashboard Nuevos -->
                     <div id="barChartSummary" class="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto" style="border-color: var(--table-border);">
                     </div>
                 </div>
@@ -229,6 +241,96 @@
         </section>
     </main>
 
+    <!-- MODAL GOOGLE APPS SCRIPT -->
+    <div id="mdlGas" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
+            <button id="btnCloseGasModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-lg">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold" style="color: var(--text-main);">Conexión Google Apps Script Web App</h3>
+                    <p class="text-xs" style="color: var(--text-muted);">Conecta directamente tu hoja de Google Sheets en tiempo real</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold mb-1" style="color: var(--text-main);">URL del Web App (Script Ejecutable)</label>
+                    <input type="url" id="txtGasUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full rounded-xl px-3 py-2.5 text-xs font-mono border focus:outline-none focus:border-indigo-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                </div>
+
+                <div id="gasStatusAlert" class="hidden p-3 rounded-xl border flex items-start gap-2 text-xs"></div>
+
+                <div class="flex items-center justify-between gap-3 pt-2">
+                    <button id="btnFetchGas" class="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl transition">
+                        <i id="gasSyncSpinner" class="fa-solid fa-rotate hidden animate-spin"></i>
+                        <span id="gasSyncBtnText">Sincronizar Datos Ahora</span>
+                    </button>
+                    <button id="btnSaveGasUrl" class="px-4 py-2.5 rounded-xl font-semibold border border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 transition">
+                        Guardar URL
+                    </button>
+                </div>
+
+                <!-- Acordeón / Código Apps Script Helper -->
+                <div class="border-t pt-3" style="border-color: var(--table-border);">
+                    <button id="btnToggleGasCode" class="flex justify-between items-center w-full text-left font-semibold text-indigo-400 hover:text-indigo-300">
+                        <span><i class="fa-solid fa-code mr-1.5"></i> Ver código Google Apps Script para tu hoja</span>
+                        <i id="gasCodeIcon" class="fa-solid fa-chevron-down text-xs transition-transform"></i>
+                    </button>
+                    
+                    <div id="gasCodeContainer" class="hidden mt-3 space-y-2">
+                        <p class="text-[11px]" style="color: var(--text-muted);">
+                            Copia este código en tu archivo de <strong>Extensiones > Apps Script</strong> en Google Sheets y publícalo como <em>Web App (Acceso: Cualquier persona / Anyone)</em> para enviar la fecha exacta de modificación:
+                        </p>
+                        <div class="relative">
+                            <pre class="bg-slate-950 p-3 rounded-xl font-mono text-[10px] text-emerald-400 overflow-x-auto border border-slate-800">
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("U123 Detalle") || ss.getSheets()[0];
+    var rawValues = sheet.getDataRange().getValues();
+    var processedData = [];
+    var timeZone = ss.getSpreadsheetTimeZone() || "GMT-6";
+    
+    for (var i = 0; i < rawValues.length; i++) {
+      var row = [];
+      var hasData = false;
+      for (var j = 0; j < rawValues[i].length; j++) {
+        var val = rawValues[i][j];
+        if (val instanceof Date) {
+          val = Utilities.formatDate(val, timeZone, "yyyy-MM-dd");
+        }
+        row.push(val);
+        if (val !== "" && val !== null) hasData = true;
+      }
+      if (hasData) processedData.push(row);
+    }
+    
+    var lastUpdated = ss.getLastUpdated();
+    var formattedDate = Utilities.formatDate(lastUpdated, timeZone, "yyyy-MM-dd HH:mm:ss");
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      lastUpdated: formattedDate,
+      data: processedData
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                            <button id="btnCopyGasCode" class="absolute top-2 right-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px]">
+                                <i class="fa-solid fa-copy"></i> Copiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL CARGA EXCEL -->
     <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
@@ -245,6 +347,11 @@
 
     <script>
         Chart.register(ChartDataLabels);
+
+        // =========================================================================
+        // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT WEB APP:
+        // =========================================================================
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzEkx9Q0u9w9R5v_ir-HUHEzd364FRxn28T2LqVPFI2LBrtJQxZK0KZoFu4BGCw4lVpUQ/exec';
 
         let currentData = [
             { empresa: 'SUBARU PUEBLA', vendedor: 'JUAN PEREZ', cantidad: 1, marca: 'SUBARU', modelo: 'CROSSTREK 2.0i DYNAMIC CVT', ano: 2025, pCompra: 301724.14, subtotal: 362068.97 },
@@ -276,36 +383,368 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initThemeToggle();
-            cargarDatosDesdeGoogleSheets();
+            setupGasModal();
+            
+            // 1. Revisa si hay una URL guardada localmente o usa la URL por defecto definida en la variable DEFAULT_GAS_URL
+            const urlAUsar = localStorage.getItem('subaru_gas_url') || DEFAULT_GAS_URL;
+            
+            if (urlAUsar && urlAUsar !== 'https://script.google.com/macros/s/TU_SCRIPT_ID_AQUI/exec') {
+                document.getElementById('txtGasUrl').value = urlAUsar;
+                sincronizarGoogleAppsScript(urlAUsar, true);
+            } else {
+                cargarDatosDesdeGoogleSheets();
+            }
         });
+
+        function setupGasModal() {
+            const mdlGas = document.getElementById('mdlGas');
+            const btnGasModal = document.getElementById('btnGasModal');
+            const btnCloseGasModal = document.getElementById('btnCloseGasModal');
+            const btnFetchGas = document.getElementById('btnFetchGas');
+            const btnSaveGasUrl = document.getElementById('btnSaveGasUrl');
+            const txtGasUrl = document.getElementById('txtGasUrl');
+            const btnToggleGasCode = document.getElementById('btnToggleGasCode');
+            const gasCodeContainer = document.getElementById('gasCodeContainer');
+            const gasCodeIcon = document.getElementById('gasCodeIcon');
+            const btnCopyGasCode = document.getElementById('btnCopyGasCode');
+
+            if (btnGasModal) btnGasModal.onclick = () => mdlGas.classList.remove('hidden');
+            if (btnCloseGasModal) btnCloseGasModal.onclick = () => mdlGas.classList.add('hidden');
+
+            btnSaveGasUrl.onclick = () => {
+                const url = txtGasUrl.value.trim();
+                if (url) {
+                    localStorage.setItem('subaru_gas_url', url);
+                    mostrarGasAlert('URL guardada correctamente en el navegador.', 'success');
+                } else {
+                    localStorage.removeItem('subaru_gas_url');
+                    mostrarGasAlert('URL eliminada.', 'info');
+                }
+            };
+
+            btnFetchGas.onclick = () => {
+                const url = txtGasUrl.value.trim();
+                if (!url) {
+                    mostrarGasAlert('Ingresa una URL válida de Google Apps Script Web App.', 'error');
+                    return;
+                }
+                localStorage.setItem('subaru_gas_url', url);
+                sincronizarGoogleAppsScript(url, false);
+            };
+
+            btnToggleGasCode.onclick = () => {
+                const isHidden = gasCodeContainer.classList.contains('hidden');
+                if (isHidden) {
+                    gasCodeContainer.classList.remove('hidden');
+                    gasCodeIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    gasCodeContainer.classList.add('hidden');
+                    gasCodeIcon.style.transform = 'rotate(0deg)';
+                }
+            };
+
+            btnCopyGasCode.onclick = () => {
+                const codeText = `function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss && e && e.parameter && e.parameter.id) {
+      ss = SpreadsheetApp.openById(e.parameter.id);
+    }
+    if (!ss) return responseJSON({ status: "error", message: "No se encontró la Hoja de Cálculo." });
+
+    var sheet = ss.getSheetByName("U123 Detalle") || ss.getSheets()[0];
+    var rawValues = sheet.getDataRange().getValues();
+    var processedData = [];
+    var timeZone = ss.getSpreadsheetTimeZone() || "GMT-6";
+    
+    for (var i = 0; i < rawValues.length; i++) {
+      var row = [];
+      var hasData = false;
+      for (var j = 0; j < rawValues[i].length; j++) {
+        var val = rawValues[i][j];
+        if (val instanceof Date) {
+          val = Utilities.formatDate(val, timeZone, "yyyy-MM-dd");
+        }
+        row.push(val);
+        if (val !== "" && val !== null && val !== undefined) hasData = true;
+      }
+      if (hasData) processedData.push(row);
+    }
+    
+    var lastUpdated = ss.getLastUpdated();
+    var formattedDate = Utilities.formatDate(lastUpdated, timeZone, "yyyy-MM-dd HH:mm:ss");
+    
+    return responseJSON({
+      status: "success",
+      lastUpdated: formattedDate,
+      data: processedData
+    });
+  } catch(err) {
+    return responseJSON({ status: "error", message: err.toString() });
+  }
+}
+
+function responseJSON(payload) {
+  return ContentService.createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+                copyToClipboard(codeText);
+                btnCopyGasCode.innerHTML = '<i class="fa-solid fa-check"></i> ¡Copiado!';
+                setTimeout(() => {
+                    btnCopyGasCode.innerHTML = '<i class="fa-solid fa-copy"></i> Copiar';
+                }, 2000);
+            };
+        }
+
+        async function sincronizarGoogleAppsScript(url, isAutoLoad = false) {
+            const spinner = document.getElementById('gasSyncSpinner');
+            const btnText = document.getElementById('gasSyncBtnText');
+            const syncBadge = document.getElementById('syncBadge');
+
+            spinner.classList.remove('hidden');
+            btnText.textContent = 'Conectando con Google Sheets...';
+
+            try {
+                const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+                if (!response.ok) throw new Error(`HTTP Status ${response.status}`);
+                
+                const headerLastMod = response.headers.get('last-modified');
+                const responseText = await response.text();
+                let parsedJson;
+
+                try {
+                    parsedJson = JSON.parse(responseText);
+                } catch(e) {
+                    // Si el endpoint retorna una página de error en HTML
+                    if (responseText.includes('Se ha producido un error') || responseText.includes('Google Drive') || responseText.includes('Authorization')) {
+                        throw new Error('Google Apps Script requiere publicar como "Nueva versión" y dar acceso a "Cualquier persona".');
+                    }
+                    procesarLibroExcel(XLSX.read(responseText, { type: 'string' }));
+                    actualizarFechaModificacion(headerLastMod || new Date());
+                    finalizarSincronizacionGas(isAutoLoad, true);
+                    return;
+                }
+
+                if (parsedJson && parsedJson.status === 'error') {
+                    throw new Error(parsedJson.message || 'Error reportado por el Script.');
+                }
+
+                // Procesar JSON retornado por Apps Script
+                let fechaUltimaMod = headerLastMod;
+
+                if (parsedJson && parsedJson.lastUpdated) {
+                    fechaUltimaMod = parsedJson.lastUpdated;
+                }
+
+                if (parsedJson && parsedJson.data && Array.isArray(parsedJson.data)) {
+                    procesar2DArray(parsedJson.data);
+                    actualizarFechaModificacion(fechaUltimaMod || new Date());
+                    finalizarSincronizacionGas(isAutoLoad, true);
+                } else if (Array.isArray(parsedJson)) {
+                    if (parsedJson.length > 0 && Array.isArray(parsedJson[0])) {
+                        procesar2DArray(parsedJson);
+                    } else if (parsedJson.length > 0 && typeof parsedJson[0] === 'object') {
+                        procesarArrayObjetos(parsedJson);
+                    }
+                    actualizarFechaModificacion(fechaUltimaMod || new Date());
+                    finalizarSincronizacionGas(isAutoLoad, true);
+                } else {
+                    throw new Error('Formato de datos no reconocido retornado por el Web App.');
+                }
+
+            } catch (err) {
+                console.warn('Error al sincronizar con Google Apps Script:', err);
+                mostrarGasAlert(`
+                    <strong>Error de conexión:</strong> ${err.message}<br><br>
+                    <span class="underline font-bold">Pasos para corregir en Google Sheets:</span><br>
+                    1. En Apps Script haz clic en <strong>Implementar > Administrar implementaciones</strong>.<br>
+                    2. Haz clic en el <strong>icono del lápiz (Editar)</strong>.<br>
+                    3. En <em>Versión</em> selecciona <strong>"Nueva versión"</strong>.<br>
+                    4. Confirma que <em>Quién tiene acceso</em> diga <strong>"Cualquier persona" (Anyone)</strong>.<br>
+                    5. Haz clic en <strong>Implementar</strong> y autoriza permisos.
+                `, 'error');
+                syncBadge.classList.add('hidden');
+                
+                if (isAutoLoad) {
+                    cargarDatosDesdeGoogleSheets();
+                }
+            } finally {
+                spinner.classList.add('hidden');
+                btnText.textContent = 'Sincronizar Datos Ahora';
+            }
+        }
+
+        function actualizarFechaModificacion(dateOrString) {
+            const badge = document.getElementById('lastModifiedBadge');
+            const lbl = document.getElementById('lblLastModified');
+            if (!badge || !lbl) return;
+
+            try {
+                const dateObj = new Date(dateOrString);
+                if (isNaN(dateObj.getTime())) {
+                    lbl.textContent = String(dateOrString);
+                } else {
+                    lbl.textContent = dateObj.toLocaleString('es-MX', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                    });
+                }
+                badge.classList.remove('hidden');
+            } catch (e) {
+                lbl.textContent = 'Recientemente';
+                badge.classList.remove('hidden');
+            }
+        }
+
+        function finalizarSincronizacionGas(isAutoLoad, exito) {
+            const syncBadge = document.getElementById('syncBadge');
+            if (exito) {
+                syncBadge.classList.remove('hidden');
+                syncBadge.innerHTML = `<i class="fa-solid fa-circle text-[6px] animate-pulse"></i> Sincronizado (${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})`;
+                mostrarGasAlert(`¡Sincronización exitosa! Registros cargados: ${currentData.length}`, 'success');
+                if (!isAutoLoad) {
+                    setTimeout(() => {
+                        document.getElementById('mdlGas').classList.add('hidden');
+                    }, 1200);
+                }
+            }
+        }
+
+        function procesar2DArray(jsonMatrix) {
+            if (jsonMatrix.length < 2) return;
+            const headers = jsonMatrix[0].map(h => String(h || '').trim().toLowerCase());
+
+            let idxEmpresa = headers.findIndex(h => h.includes('empresa'));
+            let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor') || h.includes('empleado') || h.includes('nombre'));
+            let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
+            let idxMarca = headers.findIndex(h => h.includes('marca'));
+            let idxModelo = headers.findIndex(h => h.includes('modelo'));
+            let idxAno = headers.findIndex(h => h.includes('año') || h.includes('ano') || h === 'y');
+            let idxPCompra = headers.findIndex(h => h.includes('p.compra') || h.includes('p_compra') || h.includes('compra'));
+            let idxSubtotal = headers.findIndex(h => h.includes('subtotal'));
+
+            const parsedData = [];
+            for (let i = 1; i < jsonMatrix.length; i++) {
+                const r = jsonMatrix[i];
+                if (!r || r.length === 0) continue;
+
+                const sub = Number(String(r[idxSubtotal] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+                const comp = Number(String(r[idxPCompra] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+                let anoVal = idxAno !== -1 ? r[idxAno] : 2023;
+
+                parsedData.push({
+                    empresa: String(r[idxEmpresa] ?? 'GENERAL').trim(),
+                    vendedor: idxVendedor !== -1 ? String(r[idxVendedor] ?? 'GENERAL').trim() : 'GENERAL',
+                    cantidad: Number(String(r[idxCantidad] ?? 1).replace(/[^0-9.-]+/g,"")) || 1,
+                    marca: String(r[idxMarca] ?? 'SUBARU').trim(),
+                    modelo: String(r[idxModelo] ?? 'N/D').trim(),
+                    ano: Number(String(anoVal).replace(/[^0-9]/g, '')) || 2023,
+                    pCompra: comp,
+                    subtotal: sub
+                });
+            }
+
+            if (parsedData.length > 0) {
+                currentData = parsedData;
+                initDropdowns();
+                updateDashboard();
+                setupEventListeners();
+            }
+        }
+
+        function procesarArrayObjetos(objArray) {
+            const parsedData = [];
+            objArray.forEach(r => {
+                const getVal = (keys) => {
+                    for (let k of keys) {
+                        const found = Object.keys(r).find(key => key.toLowerCase().includes(k));
+                        if (found) return r[found];
+                    }
+                    return null;
+                };
+
+                const sub = Number(String(getVal(['subtotal']) ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+                const comp = Number(String(getVal(['p.compra', 'compra']) ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+
+                parsedData.push({
+                    empresa: String(getVal(['empresa']) ?? 'GENERAL').trim(),
+                    vendedor: String(getVal(['vendedor', 'asesor']) ?? 'GENERAL').trim(),
+                    cantidad: Number(String(getVal(['cantidad']) ?? 1).replace(/[^0-9.-]+/g,"")) || 1,
+                    marca: String(getVal(['marca']) ?? 'SUBARU').trim(),
+                    modelo: String(getVal(['modelo']) ?? 'N/D').trim(),
+                    ano: Number(String(getVal(['año', 'ano']) ?? 2023).replace(/[^0-9]/g, '')) || 2023,
+                    pCompra: comp,
+                    subtotal: sub
+                });
+            });
+
+            if (parsedData.length > 0) {
+                currentData = parsedData;
+                initDropdowns();
+                updateDashboard();
+                setupEventListeners();
+            }
+        }
+
+        function mostrarGasAlert(mensaje, tipo) {
+            const alertBox = document.getElementById('gasStatusAlert');
+            alertBox.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-800', 'text-emerald-300', 'bg-rose-950/80', 'border-rose-800', 'text-rose-300', 'bg-sky-950/80', 'border-sky-800', 'text-sky-300');
+            
+            if (tipo === 'success') {
+                alertBox.classList.add('bg-emerald-950/80', 'border-emerald-800', 'text-emerald-300');
+                alertBox.innerHTML = `<i class="fa-solid fa-circle-check mt-0.5 text-emerald-400"></i> <span>${mensaje}</span>`;
+            } else if (tipo === 'error') {
+                alertBox.classList.add('bg-rose-950/80', 'border-rose-800', 'text-rose-300');
+                alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mt-0.5 text-rose-400"></i> <span>${mensaje}</span>`;
+            } else {
+                alertBox.classList.add('bg-sky-950/80', 'border-sky-800', 'text-sky-300');
+                alertBox.innerHTML = `<i class="fa-solid fa-circle-info mt-0.5 text-sky-400"></i> <span>${mensaje}</span>`;
+            }
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
 
         function initThemeToggle() {
             const btnToggle = document.getElementById('btnToggleTheme');
             const appBody = document.getElementById('appBody');
             
             const savedTheme = localStorage.getItem('subaru_theme') || 'theme-dark';
-            appBody.className = `min-h-screen pb-12 ${savedTheme}`;
+            if (appBody) appBody.className = `min-h-screen pb-12 ${savedTheme}`;
             updateThemeUI(savedTheme);
 
-            btnToggle.onclick = () => {
-                const isDark = appBody.classList.contains('theme-dark');
-                const newTheme = isDark ? 'theme-light' : 'theme-dark';
-                appBody.className = `min-h-screen pb-12 ${newTheme}`;
-                localStorage.setItem('subaru_theme', newTheme);
-                updateThemeUI(newTheme);
-                updateDashboard();
-            };
+            if (btnToggle) {
+                btnToggle.onclick = () => {
+                    const isDark = appBody ? appBody.classList.contains('theme-dark') : true;
+                    const newTheme = isDark ? 'theme-light' : 'theme-dark';
+                    if (appBody) appBody.className = `min-h-screen pb-12 ${newTheme}`;
+                    localStorage.setItem('subaru_theme', newTheme);
+                    updateThemeUI(newTheme);
+                    updateDashboard();
+                };
+            }
         }
 
         function updateThemeUI(theme) {
             const themeIcon = document.getElementById('themeIcon');
             const themeText = document.getElementById('themeText');
             if (theme === 'theme-light') {
-                themeIcon.className = 'fa-solid fa-moon text-indigo-600';
-                themeText.textContent = 'Tema Oscuro';
+                if (themeIcon) themeIcon.className = 'fa-solid fa-moon text-indigo-600';
+                if (themeText) themeText.textContent = 'Tema Oscuro';
             } else {
-                themeIcon.className = 'fa-solid fa-sun text-amber-400';
-                themeText.textContent = 'Tema Claro';
+                if (themeIcon) themeIcon.className = 'fa-solid fa-sun text-amber-400';
+                if (themeText) themeText.textContent = 'Tema Claro';
             }
         }
 
@@ -313,8 +752,10 @@
             try {
                 const response = await fetch(`${GOOGLE_SHEETS_CSV_URL}&_cb=${new Date().getTime()}`);
                 if (!response.ok) throw new Error();
+                const lastModHeader = response.headers.get('last-modified');
                 const csvText = await response.text();
                 procesarLibroExcel(XLSX.read(csvText, { type: 'string' }));
+                actualizarFechaModificacion(lastModHeader || new Date());
             } catch (err) {
                 console.warn('Usando datos locales de respaldo.');
                 initDropdowns();
@@ -333,119 +774,88 @@
 
             if (json.length < 2) return;
 
-            const headers = json[0].map(h => String(h || '').trim().toLowerCase());
-            
-            let idxEmpresa = headers.findIndex(h => h.includes('empresa'));
-            let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor') || h.includes('empleado') || h.includes('nombre'));
-            let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
-            let idxMarca = headers.findIndex(h => h.includes('marca'));
-            let idxModelo = headers.findIndex(h => h.includes('modelo'));
-            let idxAno = headers.findIndex(h => h.includes('año') || h.includes('ano') || h === 'y');
-            let idxPCompra = headers.findIndex(h => h.includes('p.compra') || h.includes('p_compra') || h.includes('compra'));
-            let idxSubtotal = headers.findIndex(h => h.includes('subtotal'));
-
-            const parsedData = [];
-            for (let i = 1; i < json.length; i++) {
-                const r = json[i];
-                if (!r || r.length === 0) continue;
-
-                const sub = Number(String(r[idxSubtotal] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
-                const comp = Number(String(r[idxPCompra] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
-                let anoVal = idxAno !== -1 ? r[idxAno] : (r[24] ?? 2023);
-
-                parsedData.push({
-                    empresa: String(r[idxEmpresa] ?? 'GENERAL').trim(),
-                    vendedor: idxVendedor !== -1 ? String(r[idxVendedor] ?? 'GENERAL').trim() : 'GENERAL',
-                    cantidad: Number(String(r[idxCantidad] ?? 1).replace(/[^0-9.-]+/g,"")) || 1,
-                    marca: String(r[idxMarca] ?? 'SUBARU').trim(),
-                    modelo: String(r[idxModelo] ?? 'N/D').trim(),
-                    ano: Number(String(anoVal).replace(/[^0-9]/g, '')) || 2023,
-                    pCompra: comp,
-                    subtotal: sub
-                });
-            }
-
-            if (parsedData.length > 0) {
-                currentData = parsedData;
-            }
-            initDropdowns();
-            updateDashboard();
-            setupEventListeners();
+            procesar2DArray(json);
         }
 
         function setupEventListeners() {
             ['selEmpresa', 'selMarca', 'selVendedor'].forEach(id => {
-                document.getElementById(id).addEventListener('change', updateDashboard);
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', updateDashboard);
             });
 
             const modal = document.getElementById('mdlUpload');
-            document.getElementById('btnUploadModal').onclick = () => modal.classList.remove('hidden');
-            document.getElementById('btnCloseModal').onclick = () => modal.classList.add('hidden');
-            document.getElementById('btnExportExcel').onclick = exportarExcel;
+            const btnUploadModal = document.getElementById('btnUploadModal');
+            const btnCloseModal = document.getElementById('btnCloseModal');
+            const btnExportExcel = document.getElementById('btnExportExcel');
+
+            if (btnUploadModal && modal) btnUploadModal.onclick = () => modal.classList.remove('hidden');
+            if (btnCloseModal && modal) btnCloseModal.onclick = () => modal.classList.add('hidden');
+            if (btnExportExcel) btnExportExcel.onclick = exportarExcel;
 
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
-            dropZone.onclick = () => fileInput.click();
-            fileInput.onchange = (e) => {
-                if(e.target.files.length > 0) {
-                    const reader = new FileReader();
-                    reader.onload = (evt) => {
-                        procesarLibroExcel(XLSX.read(new Uint8Array(evt.target.result), { type: 'array' }));
-                        modal.classList.add('hidden');
-                    };
-                    reader.readAsArrayBuffer(e.target.files[0]);
-                }
-            };
+            if (dropZone && fileInput) {
+                dropZone.onclick = () => fileInput.click();
+                fileInput.onchange = (e) => {
+                    if (e.target.files.length > 0) {
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                            procesarLibroExcel(XLSX.read(new Uint8Array(evt.target.result), { type: 'array' }));
+                            if (modal) modal.classList.add('hidden');
+                        };
+                        reader.readAsArrayBuffer(e.target.files[0]);
+                    }
+                };
+            }
         }
 
         function initDropdowns() {
-            updateDropdownsOptions();
+            const empresas = [...new Set(currentData.map(d => d.empresa).filter(Boolean))].sort();
+            const marcas = [...new Set(currentData.map(d => d.marca).filter(Boolean))].sort();
+            const vendedores = [...new Set(currentData.map(d => d.vendedor).filter(Boolean))].sort();
+
+            populateSelect('selEmpresa', empresas, 'Todas las empresas');
+            populateSelect('selMarca', marcas, 'Todas las marcas');
+            populateSelect('selVendedor', vendedores, 'Todos los vendedores');
         }
 
-        function updateDropdownsOptions() {
-            const curEmpresa = document.getElementById('selEmpresa').value;
-            const curMarca = document.getElementById('selMarca').value;
-            const curVendedor = document.getElementById('selVendedor').value;
-
-            const dataForEmpresa = currentData.filter(d => {
-                if (curMarca !== 'TODOS' && d.marca !== curMarca) return false;
-                if (curVendedor !== 'TODOS' && d.vendedor !== curVendedor) return false;
-                return true;
-            });
-            const empresas = [...new Set(dataForEmpresa.map(d => d.empresa))].filter(Boolean);
-
-            const dataForMarca = currentData.filter(d => {
-                if (curEmpresa !== 'TODOS' && d.empresa !== curEmpresa) return false;
-                if (curVendedor !== 'TODOS' && d.vendedor !== curVendedor) return false;
-                return true;
-            });
-            const marcas = [...new Set(dataForMarca.map(d => d.marca))].filter(Boolean);
-
-            const dataForVendedor = currentData.filter(d => {
-                if (curEmpresa !== 'TODOS' && d.empresa !== curEmpresa) return false;
-                if (curMarca !== 'TODOS' && d.marca !== curMarca) return false;
-                return true;
-            });
-            const vendedores = [...new Set(dataForVendedor.map(d => d.vendedor))].filter(Boolean);
-
-            poblarSelect('selEmpresa', empresas, 'Todas las empresas', curEmpresa);
-            poblarSelect('selMarca', marcas, 'Todas las marcas', curMarca);
-            poblarSelect('selVendedor', vendedores, 'Todos los vendedores', curVendedor);
-        }
-
-        function poblarSelect(id, items, textoDefecto, valActual) {
-            const sel = document.getElementById(id);
-            sel.innerHTML = `<option value="TODOS">${textoDefecto}</option>`;
-            items.sort().forEach(item => {
+        function populateSelect(id, items, defaultText) {
+            const select = document.getElementById(id);
+            if (!select) return;
+            const currentVal = select.value;
+            select.innerHTML = `<option value="TODOS">${defaultText}</option>`;
+            items.forEach(item => {
                 const opt = document.createElement('option');
                 opt.value = item;
                 opt.textContent = item;
-                if (item === valActual) opt.selected = true;
-                sel.appendChild(opt);
+                select.appendChild(opt);
             });
-            if (valActual !== 'TODOS' && !items.includes(valActual)) {
-                sel.value = 'TODOS';
+            if (items.includes(currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = 'TODOS';
             }
+        }
+
+        function updateDropdownsOptions() {
+            const selEmpresaVal = document.getElementById('selEmpresa')?.value || 'TODOS';
+            const selMarcaVal = document.getElementById('selMarca')?.value || 'TODOS';
+            
+            let dataForMarca = currentData;
+            if (selEmpresaVal !== 'TODOS') {
+                dataForMarca = dataForMarca.filter(d => d.empresa === selEmpresaVal);
+            }
+            
+            let dataForVendedor = dataForMarca;
+            if (selMarcaVal !== 'TODOS') {
+                dataForVendedor = dataForVendedor.filter(d => d.marca === selMarcaVal);
+            }
+
+            const marcas = [...new Set(dataForMarca.map(d => d.marca).filter(Boolean))].sort();
+            populateSelect('selMarca', marcas, 'Todas las marcas');
+
+            const vendedores = [...new Set(dataForVendedor.map(d => d.vendedor).filter(Boolean))].sort();
+            populateSelect('selVendedor', vendedores, 'Todos los vendedores');
         }
 
         function getFilteredData() {
@@ -669,7 +1079,6 @@
                 const labelsMarca = Object.keys(marcaMap);
                 const valuesMarca = labelsMarca.map(l => marcaMap[l]);
                 
-                // Mapeo idéntico 1:1 entre etiqueta de marca y color
                 const brandColorMap = {};
                 labelsMarca.forEach((marca, mIdx) => {
                     const mUpper = marca.toUpperCase();
