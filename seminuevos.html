@@ -541,7 +541,10 @@
                             <strong class="font-mono text-xs" style="color: var(--text-main);">${formatCurrency(info.subtotal)}</strong>
                         </div>
                         <div>
-                            <span style="color: var(--text-muted);" class="block text-[10px] uppercase font-semibold">Utilidad (${margenUtilidad.toFixed(1)}%)</span>
+                            <span style="color: var(--text-muted);" class="block text-[10px] uppercase font-semibold flex items-center gap-2">
+                                Utilidad
+                                <span class="text-amber-500 font-extrabold text-xs font-mono">${margenUtilidad.toFixed(1)}%</span>
+                            </span>
                             <strong class="font-mono text-xs text-emerald-400">${formatCurrency(utilidadMonto)}</strong>
                         </div>
                     </div>
