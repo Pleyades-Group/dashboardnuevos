@@ -13,8 +13,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <!-- SheetJS for Excel Reading -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- PapaParse for CSV parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -151,7 +149,7 @@
                     </label>
                 </div>
                 <div id="syncStatusBadge" class="text-[11px] text-slate-400 font-medium">
-                    Modo: Datos Locales / Sincronizable con Google Sheets
+                    Modo: Datos Locales / Sincronizable vía Google Apps Script (JSON)
                 </div>
             </div>
         </section>
@@ -314,27 +312,23 @@
                 <p class="text-[10px] text-slate-500 mt-1">Soporta hojas múltiples .xlsx</p>
                 <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
             </div>
+
+            <!-- Toast / Feedback alert panel inside modal -->
+            <div id="modalAlert" class="mt-4 hidden p-3 rounded-xl text-xs flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300">
+                <i class="fa-solid fa-circle-exclamation text-sm"></i>
+                <span id="modalAlertText">No se pudieron extraer registros válidos.</span>
+            </div>
         </div>
     </div>
 
     <script>
         Chart.register(ChartDataLabels);
 
-        // GOOGLE APPS SCRIPT WEB APP URL (PEGA AQUÍ TU URL CON TERMINACIÓN /exec)
+        // GOOGLE APPS SCRIPT WEB APP URL
         const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXKToH_z5tlxtSu32OSCNelIcj9Rg3MqCNqkBKe9uBi9kOkZeMh7sYqF9OY7K3AFkO/exec'; 
 
-        // GOOGLE SHEETS CSV URL CONFIGURATION CONSTANTS (RESPALDO EN CASO DE ERROR/TIMEOUT)
-        const GOOGLE_SHEETS_CSV_URL = {
-            servicio: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=1841737790&single=true&output=csv',
-            mostrador: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=1921079646&single=true&output=csv',
-            existencias: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=814376793&single=true&output=csv',
-            resumenclas: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfH7aEWBQVHcw7HyErEVpu2QfJve0_GJvfwpYZFflWz4KW9fTU4GvZrNsvu4Aiaw/pub?gid=132782580&single=true&output=csv'
-        };
-
         let masterData = [];
-
         let resumenClasData = [];
-
         let charts = {};
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -384,17 +378,39 @@
             };
 
             const uploadModal = document.getElementById('mdlUpload');
-            document.getElementById('btnUploadModal').onclick = () => uploadModal.classList.remove('hidden');
-            document.getElementById('btnCloseModal').onclick = () => uploadModal.classList.add('hidden');
+            document.getElementById('btnUploadModal').onclick = () => {
+                hideModalAlert();
+                uploadModal.classList.remove('hidden');
+            };
+            document.getElementById('btnCloseModal').onclick = () => {
+                hideModalAlert();
+                uploadModal.classList.add('hidden');
+            };
             
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
             dropZone.onclick = () => fileInput.click();
-            fileInput.onchange = (e) => handleExcelUpload(e.target.files[0]);
+            fileInput.onchange = (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handleExcelUpload(e.target.files[0]);
+                }
+            };
+        }
+
+        function showModalAlert(msg) {
+            const alertBox = document.getElementById('modalAlert');
+            const alertText = document.getElementById('modalAlertText');
+            alertText.textContent = msg;
+            alertBox.classList.remove('hidden');
+        }
+
+        function hideModalAlert() {
+            const alertBox = document.getElementById('modalAlert');
+            alertBox.classList.add('hidden');
         }
 
         async function fetchWithTimeout(resource, options = {}) {
-            const { timeout = 5000 } = options;
+            const { timeout = 8000 } = options;
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeout);
             try {
@@ -405,6 +421,73 @@
                 return response;
             } finally {
                 clearTimeout(id);
+            }
+        }
+
+        async function fetchGoogleSheetsData() {
+            const badge = document.getElementById('syncStatusBadge');
+            const syncIcon = document.getElementById('syncIcon');
+            badge.textContent = 'Sincronizando con Google Apps Script...';
+            badge.className = 'text-[11px] text-amber-400 font-medium animate-pulse';
+            syncIcon.className = 'fa-solid fa-rotate fa-spin';
+
+            let newRows = [];
+            let newResumenClas = [];
+            let success = false;
+            let errorMessage = '';
+
+            try {
+                const url = GOOGLE_APPS_SCRIPT_URL ? GOOGLE_APPS_SCRIPT_URL.trim() : '';
+                const isPlaceholder = !url || url.includes('AQUÍ_TU_URL');
+
+                if (!isPlaceholder) {
+                    const response = await fetchWithTimeout(url, { timeout: 8000, redirect: 'follow' });
+                    if (response.ok) {
+                        const jsonResult = await response.json();
+                        
+                        if (jsonResult && typeof jsonResult === 'object') {
+                            if (jsonResult.Servicio || jsonResult.servicio) processServicioRows(jsonResult.Servicio || jsonResult.servicio, newRows);
+                            if (jsonResult.Mostrador || jsonResult.mostrador) processMostradorRows(jsonResult.Mostrador || jsonResult.mostrador, newRows);
+                            if (jsonResult.Existencias || jsonResult.existencias) processExistenciasRows(jsonResult.Existencias || jsonResult.existencias, newRows);
+                            if (jsonResult.Resumenclas || jsonResult.resumenclas) processResumenclasRows(jsonResult.Resumenclas || jsonResult.resumenclas, newResumenClas);
+                            
+                            if (Array.isArray(jsonResult.data)) {
+                                processServicioRows(jsonResult.data, newRows);
+                                processMostradorRows(jsonResult.data, newRows);
+                                processExistenciasRows(jsonResult.data, newRows);
+                                processResumenclasRows(jsonResult.data, newResumenClas);
+                            }
+                        }
+
+                        if (newRows.length > 0 || newResumenClas.length > 0) {
+                            success = true;
+                        } else {
+                            errorMessage = 'No se encontraron datos en el objeto JSON de Apps Script.';
+                        }
+                    } else {
+                        errorMessage = `Error HTTP ${response.status} de Apps Script.`;
+                    }
+                } else {
+                    errorMessage = 'URL de Google Apps Script no configurada.';
+                }
+
+                if (success) {
+                    masterData = newRows;
+                    resumenClasData = newResumenClas;
+                    badge.textContent = '⚡ Sincronizado vía Google Apps Script (JSON)';
+                    badge.className = 'text-[11px] text-emerald-400 font-medium';
+                } else {
+                    badge.textContent = errorMessage ? `⚠️ ${errorMessage}` : '⚠️ Sin datos remotos (Usando datos locales)';
+                    badge.className = 'text-[11px] text-amber-400 font-medium';
+                }
+
+            } catch (err) {
+                console.warn('Error durante la sincronización:', err);
+                badge.textContent = '⚠️ Sin conexión con Apps Script (Usando datos locales)';
+                badge.className = 'text-[11px] text-amber-400 font-medium';
+            } finally {
+                syncIcon.className = 'fa-solid fa-cloud-arrow-down';
+                updateDashboard();
             }
         }
 
@@ -469,116 +552,6 @@
                     targetArr.push({ clasificacion, veracruz, puebla, oaxaca });
                 }
             });
-        }
-
-        async function fetchGoogleSheetsData() {
-            const badge = document.getElementById('syncStatusBadge');
-            const syncIcon = document.getElementById('syncIcon');
-            badge.textContent = 'Sincronizando con Google Sheets...';
-            badge.className = 'text-[11px] text-amber-400 font-medium animate-pulse';
-            syncIcon.className = 'fa-solid fa-rotate fa-spin';
-
-            let newRows = [];
-            let newResumenClas = [];
-            let fetchedViaAppsScript = false;
-            let errorMessage = '';
-
-            try {
-                // 1. Intentar cargar mediante Apps Script Web App JSON
-                const url = GOOGLE_APPS_SCRIPT_URL ? GOOGLE_APPS_SCRIPT_URL.trim() : '';
-                const isPlaceholder = !url || url.includes('AQUÍ_TU_URL');
-
-                if (!isPlaceholder) {
-                    try {
-                        const response = await fetchWithTimeout(url, { timeout: 6000, redirect: 'follow' });
-                        if (response.ok) {
-                            const jsonResult = await response.json();
-                            
-                            if (jsonResult && typeof jsonResult === 'object') {
-                                if (jsonResult.Servicio || jsonResult.servicio) processServicioRows(jsonResult.Servicio || jsonResult.servicio, newRows);
-                                if (jsonResult.Mostrador || jsonResult.mostrador) processMostradorRows(jsonResult.Mostrador || jsonResult.mostrador, newRows);
-                                if (jsonResult.Existencias || jsonResult.existencias) processExistenciasRows(jsonResult.Existencias || jsonResult.existencias, newRows);
-                                if (jsonResult.Resumenclas || jsonResult.resumenclas) processResumenclasRows(jsonResult.Resumenclas || jsonResult.resumenclas, newResumenClas);
-                                
-                                if (Array.isArray(jsonResult.data)) {
-                                    processServicioRows(jsonResult.data, newRows);
-                                    processMostradorRows(jsonResult.data, newRows);
-                                    processExistenciasRows(jsonResult.data, newRows);
-                                    processResumenclasRows(jsonResult.data, newResumenClas);
-                                }
-                            }
-
-                            if (newRows.length > 0 || newResumenClas.length > 0) {
-                                fetchedViaAppsScript = true;
-                            }
-                        } else {
-                            errorMessage = `Apps Script devolvió estado HTTP ${response.status}`;
-                        }
-                    } catch (appsScriptErr) {
-                        console.warn('Apps Script no respondió a tiempo o bloqueo CORS:', appsScriptErr);
-                        errorMessage = 'Error de conexión o permisos en Apps Script.';
-                    }
-                }
-
-                // 2. Fallback: Descarga mediante CSV si Apps Script no obtuvo datos
-                if (!fetchedViaAppsScript) {
-                    const csvPromises = [];
-                    const keys = ['servicio', 'mostrador', 'existencias', 'resumenclas'];
-
-                    keys.forEach(k => {
-                        if (GOOGLE_SHEETS_CSV_URL[k]) {
-                            csvPromises.push(
-                                fetchWithTimeout(GOOGLE_SHEETS_CSV_URL[k], { timeout: 5000 })
-                                    .then(res => res.ok ? res.text() : Promise.reject(`HTTP ${res.status}`))
-                                    .then(csvText => {
-                                        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-                                        return { key: k, data: parsed.data };
-                                    })
-                                    .catch(err => {
-                                        console.warn(`Error al cargar CSV ${k}:`, err);
-                                        return { key: k, data: null };
-                                    })
-                            );
-                        }
-                    });
-
-                    if (csvPromises.length > 0) {
-                        const results = await Promise.allSettled(csvPromises);
-                        results.forEach(res => {
-                            if (res.status === 'fulfilled' && res.value && res.value.data) {
-                                const { key, data } = res.value;
-                                if (key === 'servicio') processServicioRows(data, newRows);
-                                if (key === 'mostrador') processMostradorRows(data, newRows);
-                                if (key === 'existencias') processExistenciasRows(data, newRows);
-                                if (key === 'resumenclas') processResumenclasRows(data, newResumenClas);
-                            }
-                        });
-                    }
-                }
-
-                // 3. Actualizar modelo global
-                if (newRows.length > 0) masterData = newRows;
-                if (newResumenClas.length > 0) resumenClasData = newResumenClas;
-
-                if (fetchedViaAppsScript) {
-                    badge.textContent = '⚡ Sincronizado Google Apps Script (JSON)';
-                    badge.className = 'text-[11px] text-emerald-400 font-medium';
-                } else if (newRows.length > 0) {
-                    badge.textContent = '📄 Sincronizado CSV';
-                    badge.className = 'text-[11px] text-sky-400 font-medium';
-                } else {
-                    badge.textContent = errorMessage ? `⚠️ ${errorMessage}` : '⚠️ Sin conexión a Google Sheets (Usando datos locales)';
-                    badge.className = 'text-[11px] text-amber-400 font-medium';
-                }
-
-            } catch (err) {
-                console.error('Error general durante la sincronización:', err);
-                badge.textContent = '⚠️ Error en la sincronización de datos';
-                badge.className = 'text-[11px] text-rose-400 font-medium';
-            } finally {
-                syncIcon.className = 'fa-solid fa-cloud-arrow-down';
-                updateDashboard();
-            }
         }
 
         function getFilteredData() {
@@ -1044,84 +1017,89 @@
         }
 
         function handleExcelUpload(file) {
+            hideModalAlert();
             const reader = new FileReader();
             reader.onload = (e) => {
-                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                let parsedRows = [];
-                let parsedResumenclas = [];
+                try {
+                    const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    let parsedRows = [];
+                    let parsedResumenclas = [];
 
-                workbook.SheetNames.forEach(sheetName => {
-                    const sheet = workbook.Sheets[sheetName];
-                    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-                    
-                    const sLower = sheetName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                        
+                        const sLower = sheetName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-                    const isServicio = sLower.includes('servicio') || sLower.includes('u26');
-                    const isMostrador = sLower.includes('mostrador') || sLower.includes('u931');
-                    const isExistencias = sLower.includes('existencias') || sLower.includes('175');
-                    const isResumenclas = sLower.includes('resumenclas') || sLower.includes('resumen clas');
+                        const isServicio = sLower.includes('servicio') || sLower.includes('u26');
+                        const isMostrador = sLower.includes('mostrador') || sLower.includes('u931');
+                        const isExistencias = sLower.includes('existencias') || sLower.includes('175');
+                        const isResumenclas = sLower.includes('resumenclas') || sLower.includes('resumen clas');
 
-                    if (isResumenclas) {
+                        if (isResumenclas) {
+                            json.forEach((row) => {
+                                let clasificacion = getStringValByExactNames(row, ['Clasificacion', 'Clasificación', 'Clasif', 'Clase']);
+                                if (clasificacion) {
+                                    let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER']);
+                                    let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE']);
+                                    let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX']);
+                                    parsedResumenclas.push({ clasificacion, veracruz, puebla, oaxaca });
+                                }
+                            });
+                            return;
+                        }
+
+                        if (!isServicio && !isMostrador && !isExistencias) return;
+
                         json.forEach((row) => {
-                            let clasificacion = getStringValByExactNames(row, ['Clasificacion', 'Clasificación', 'Clasif', 'Clase']);
-                            if (clasificacion) {
-                                let veracruz = getValByExactNames(row, ['VERACRUZ', 'Veracruz', 'VER']);
-                                let puebla = getValByExactNames(row, ['PUEBLA', 'Puebla', 'PUE']);
-                                let oaxaca = getValByExactNames(row, ['OAXACA', 'Oaxaca', 'OAX']);
-                                parsedResumenclas.push({ clasificacion, veracruz, puebla, oaxaca });
+                            let almacen = detectAlmacen(row, sheetName);
+                            let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
+
+                            if (isServicio) {
+                                let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones']);
+                                let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef']);
+                                let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra']);
+                                let totVenta = getValByExactNames(row, ['T.O.T', 'TOT', 'T O T']);
+                                let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT']);
+
+                                if (refVenta !== 0 || refCosto !== 0) {
+                                    parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Refacción Taller Servicio', venta: refVenta, costo: refCosto, tipoV });
+                                }
+                                if (manoObraVenta !== 0) {
+                                    parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: manoObraVenta, costo: 0, tipoV });
+                                }
+                                if (totVenta !== 0 || totCosto !== 0) {
+                                    parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: totVenta, costo: totCosto, tipoV });
+                                }
+                            } else if (isMostrador) {
+                                let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal']);
+                                let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref']);
+                                let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador').trim();
+
+                                if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
+                                    parsedRows.push({ almacen, hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto, venta: refMostradorVenta, costo: refMostradorCosto, tipoV: '' });
+                                }
+                            } else if (isExistencias) {
+                                let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor', 'Existencias']);
+                                let concepto = String(row.Concepto || row.Descripcion || row.Almacen || 'Inventario Stock').trim();
+                                if (inventarioVenta !== 0) {
+                                    parsedRows.push({ almacen, hoja: 'Existencias', categoria: 'STOCK', concepto: `Existencias: ${concepto}`, venta: inventarioVenta, costo: 0, tipoV: '' });
+                                }
                             }
                         });
-                        return;
-                    }
-
-                    if (!isServicio && !isMostrador && !isExistencias) return;
-
-                    json.forEach((row) => {
-                        let almacen = detectAlmacen(row, sheetName);
-                        let tipoV = String(row.TipoV || row.TIPOV || row.Tipo_V || row.tipo_venta || '').trim();
-
-                        if (isServicio) {
-                            let refVenta = getValByExactNames(row, ['Vta. Ref', 'Vta Ref', 'Refaccion', 'Refacciones']);
-                            let refCosto = getValByExactNames(row, ['Costo Ref', 'CostoRef']);
-                            let manoObraVenta = getValByExactNames(row, ['ImpMO', 'Mano Obra', 'ManoObra']);
-                            let totVenta = getValByExactNames(row, ['T.O.T', 'TOT', 'T O T']);
-                            let totCosto = getValByExactNames(row, ['Costo T.O.T', 'CostoTOT']);
-
-                            if (refVenta !== 0 || refCosto !== 0) {
-                                parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'REFACCIONES TALLER', concepto: 'Refacción Taller Servicio', venta: refVenta, costo: refCosto, tipoV });
-                            }
-                            if (manoObraVenta !== 0) {
-                                parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'MANO DE OBRA', concepto: 'Mano de Obra (ImpMO)', venta: manoObraVenta, costo: 0, tipoV });
-                            }
-                            if (totVenta !== 0 || totCosto !== 0) {
-                                parsedRows.push({ almacen, hoja: 'Servicio', categoria: 'T.O.T', concepto: 'Trabajos Fuera de Taller (T.O.T)', venta: totVenta, costo: totCosto, tipoV });
-                            }
-                        } else if (isMostrador) {
-                            let refMostradorVenta = getValByExactNames(row, ['Refacciones', 'Refaccion', 'Vta Ref', 'Venta', 'Importe', 'Subtotal']);
-                            let refMostradorCosto = getValByExactNames(row, ['Costo', 'CostoRef', 'Costo Ref']);
-                            let concepto = String(row.Concepto || row.Descripcion || 'Refacciones Mostrador').trim();
-
-                            if (refMostradorVenta !== 0 || refMostradorCosto !== 0) {
-                                parsedRows.push({ almacen, hoja: 'Mostrador', categoria: 'REFACCIONES MOSTRADOR', concepto, venta: refMostradorVenta, costo: refMostradorCosto, tipoV: '' });
-                            }
-                        } else if (isExistencias) {
-                            let inventarioVenta = getValByExactNames(row, ['Valor stock', 'Valor Stock', 'ValorStock', 'Stock', 'Valor', 'Existencias']);
-                            let concepto = String(row.Concepto || row.Descripcion || row.Almacen || 'Inventario Stock').trim();
-                            if (inventarioVenta !== 0) {
-                                parsedRows.push({ almacen, hoja: 'Existencias', categoria: 'STOCK', concepto: `Existencias: ${concepto}`, venta: inventarioVenta, costo: 0, tipoV: '' });
-                            }
-                        }
                     });
-                });
 
-                if (parsedRows.length > 0 || parsedResumenclas.length > 0) {
-                    if (parsedRows.length > 0) masterData = parsedRows;
-                    if (parsedResumenclas.length > 0) resumenClasData = parsedResumenclas;
-                    
-                    updateDashboard();
-                    document.getElementById('mdlUpload').classList.add('hidden');
-                } else {
-                    alert('No se pudieron extraer registros válidos del archivo Excel enviado.');
+                    if (parsedRows.length > 0 || parsedResumenclas.length > 0) {
+                        if (parsedRows.length > 0) masterData = parsedRows;
+                        if (parsedResumenclas.length > 0) resumenClasData = parsedResumenclas;
+                        
+                        updateDashboard();
+                        document.getElementById('mdlUpload').classList.add('hidden');
+                    } else {
+                        showModalAlert('No se pudieron extraer registros válidos del archivo Excel.');
+                    }
+                } catch (err) {
+                    showModalAlert('Ocurrió un error al procesar el archivo Excel. Revisa el formato.');
                 }
             };
             reader.readAsArrayBuffer(file);
