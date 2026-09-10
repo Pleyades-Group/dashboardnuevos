@@ -321,6 +321,19 @@
         </div>
     </div>
 
+    <!-- Pantalla/Aviso de Carga (Loading Overlay) -->
+    <div id="loadingOverlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-md transition-opacity duration-300">
+        <div class="glass-panel p-8 rounded-2xl flex flex-col items-center gap-4 border border-amber-500/30 shadow-2xl shadow-amber-500/10 max-w-xs text-center">
+            <div class="relative flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-inner">
+                <i class="fa-solid fa-clock text-3xl animate-spin" style="animation-duration: 2.5s;"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-slate-100 tracking-wide">Cargando Dashboard</h3>
+                <p id="loadingSubtext" class="text-xs text-slate-400 mt-1 font-medium">Sincronizando datos de posventa...</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         Chart.register(ChartDataLabels);
 
@@ -330,6 +343,22 @@
         let masterData = [];
         let resumenClasData = [];
         let charts = {};
+
+        function showLoadingOverlay(message) {
+            const overlay = document.getElementById('loadingOverlay');
+            const subtext = document.getElementById('loadingSubtext');
+            if (subtext && message) subtext.textContent = message;
+            overlay.classList.remove('hidden');
+            overlay.classList.remove('opacity-0');
+        }
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initThemeToggle();
@@ -425,6 +454,7 @@
         }
 
         async function fetchGoogleSheetsData() {
+            showLoadingOverlay('Sincronizando datos con Google Sheets...');
             const badge = document.getElementById('syncStatusBadge');
             const syncIcon = document.getElementById('syncIcon');
             badge.textContent = 'Sincronizando con Google Apps Script...';
@@ -488,6 +518,7 @@
             } finally {
                 syncIcon.className = 'fa-solid fa-cloud-arrow-down';
                 updateDashboard();
+                hideLoadingOverlay();
             }
         }
 
@@ -860,6 +891,16 @@
             `;
         }
 
+        function getLeyendaClasificacion(clas) {
+            if (!clas) return '';
+            const norm = String(clas).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            if (norm.includes('RAPIDO') || norm.includes('RAPIDA')) return '>=1 Venta en los últimos 3 Meses';
+            if (norm.includes('LENTO') || norm.includes('LENTA')) return '>=1 Venta en los últimos 6 Meses';
+            if (norm.includes('ESTANCADO') || norm.includes('ESTANCADA')) return '>=0 Ventas entre los últimos 7 y 12 Meses';
+            if (norm.includes('OBSOLETO') || norm.includes('OBSOLETA')) return '0 Ventas > 12 Meses';
+            return '';
+        }
+
         function renderResumenclasTable() {
             const thead = document.getElementById('tblResumenclasHead');
             const tbody = document.getElementById('tblResumenclasBody');
@@ -883,6 +924,7 @@
 
                 resumenClasData.forEach(row => {
                     const clas = row.clasificacion;
+                    const leyenda = getLeyendaClasificacion(clas);
                     let valAlm = 0;
                     const sUpper = selectedAlmacen.toUpperCase();
                     if (sUpper.includes('PUE')) valAlm = Number(row.puebla) || 0;
@@ -894,7 +936,10 @@
 
                     tbody.innerHTML += `
                         <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
-                            <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
+                            <td class="px-3 py-2.5">
+                                <div class="font-bold text-amber-400">${clas}</div>
+                                ${leyenda ? `<div class="text-[10px] font-medium leading-tight mt-0.5" style="color: var(--text-muted);">${leyenda}</div>` : ''}
+                            </td>
                             <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(valAlm)}</td>
                         </tr>
                     `;
@@ -923,6 +968,7 @@
 
                 resumenClasData.forEach(row => {
                     const clas = row.clasificacion;
+                    const leyenda = getLeyendaClasificacion(clas);
                     const vPue = Number(row.puebla) || 0;
                     const vOax = Number(row.oaxaca) || 0;
                     const vVer = Number(row.veracruz) || 0;
@@ -932,7 +978,10 @@
 
                     tbody.innerHTML += `
                         <tr class="border-b hover:bg-slate-800/20" style="border-color: var(--table-border);">
-                            <td class="px-3 py-2.5 font-bold text-amber-400">${clas}</td>
+                            <td class="px-3 py-2.5">
+                                <div class="font-bold text-amber-400">${clas}</div>
+                                ${leyenda ? `<div class="text-[10px] font-medium leading-tight mt-0.5" style="color: var(--text-muted);">${leyenda}</div>` : ''}
+                            </td>
                             <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vPue)}</td>
                             <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vOax)}</td>
                             <td class="px-3 py-2.5 text-right font-mono">${formatCurrency(vVer)}</td>
@@ -1018,6 +1067,7 @@
 
         function handleExcelUpload(file) {
             hideModalAlert();
+            showLoadingOverlay('Procesando archivo Excel...');
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
@@ -1100,6 +1150,8 @@
                     }
                 } catch (err) {
                     showModalAlert('Ocurrió un error al procesar el archivo Excel. Revisa el formato.');
+                } finally {
+                    hideLoadingOverlay();
                 }
             };
             reader.readAsArrayBuffer(file);
