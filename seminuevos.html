@@ -87,7 +87,6 @@
 </head>
 <body class="min-h-screen pb-12 theme-dark" id="appBody">
 
-    <!-- ENCABEZADO -->
     <header class="sticky top-0 z-40 border-b px-4 lg:px-8 py-3" id="mainHeader" style="border-color: var(--header-border); background-color: var(--header-bg);">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -121,7 +120,6 @@
 
     <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
 
-        <!-- FILTROS EN CASCADA -->
         <section class="glass-panel rounded-2xl p-4 shadow-xl">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
@@ -145,7 +143,6 @@
             </div>
         </section>
 
-        <!-- FICHAS KPI -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="glass-card rounded-2xl p-4">
                 <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">UNIDADES VENDIDAS</span>
@@ -166,7 +163,6 @@
             </div>
         </section>
 
-        <!-- SECCIÓN DE GRÁFICAS -->
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Gráfica de Barras -->
             <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
@@ -205,7 +201,6 @@
             </div>
         </section>
 
-        <!-- TABLA -->
         <section class="glass-panel rounded-2xl p-5 shadow-xl">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-base font-bold" style="color: var(--text-main);">Detalle Operativo de Venta por Empresa</h3>
@@ -229,7 +224,6 @@
         </section>
     </main>
 
-    <!-- MODAL CARGA EXCEL -->
     <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
             <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
@@ -242,6 +236,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
     <script>
         Chart.register(ChartDataLabels);
@@ -323,6 +320,27 @@
             }
         }
 
+        // Función para parsear números reconociendo formatos negativos (-1, (1), etc.)
+        function parseNumber(val, defaultVal = 0) {
+            if (val === null || val === undefined || val === '') return defaultVal;
+            if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
+            let str = String(val).trim();
+            if (!str) return defaultVal;
+
+            let isNegative = false;
+            if ((str.startsWith('(') && str.endsWith(')')) || str.includes('-')) {
+                isNegative = true;
+            }
+
+            let cleaned = str.replace(/[^0-9.]/g, '');
+            if (!cleaned) return defaultVal;
+
+            let num = parseFloat(cleaned);
+            if (isNaN(num)) return defaultVal;
+
+            return isNegative ? -num : num;
+        }
+
         function procesarLibroExcel(workbook) {
             let targetSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'u123 detalle');
             if (!targetSheetName) {
@@ -335,28 +353,29 @@
 
             const headers = json[0].map(h => String(h || '').trim().toLowerCase());
             
-            let idxEmpresa = headers.findIndex(h => h.includes('empresa'));
+            let idxEmpresa = headers.findIndex(h => h.includes('empresa') || h.includes('sucursal') || h.includes('agencia'));
             let idxVendedor = headers.findIndex(h => h.includes('vendedor') || h.includes('asesor') || h.includes('empleado') || h.includes('nombre'));
-            let idxCantidad = headers.findIndex(h => h.includes('cantidad'));
+            let idxCantidad = headers.findIndex(h => h.includes('cant') || h.includes('cantidad') || h === 'qty' || h.includes('unid'));
             let idxMarca = headers.findIndex(h => h.includes('marca'));
             let idxModelo = headers.findIndex(h => h.includes('modelo'));
             let idxAno = headers.findIndex(h => h.includes('año') || h.includes('ano') || h === 'y');
-            let idxPCompra = headers.findIndex(h => h.includes('p.compra') || h.includes('p_compra') || h.includes('compra'));
-            let idxSubtotal = headers.findIndex(h => h.includes('subtotal'));
+            let idxPCompra = headers.findIndex(h => h.includes('p.compra') || h.includes('p_compra') || h.includes('compra') || h.includes('costo'));
+            let idxSubtotal = headers.findIndex(h => h.includes('subtotal') || h.includes('precio'));
 
             const parsedData = [];
             for (let i = 1; i < json.length; i++) {
                 const r = json[i];
                 if (!r || r.length === 0) continue;
 
-                const sub = Number(String(r[idxSubtotal] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
-                const comp = Number(String(r[idxPCompra] ?? 0).replace(/[^0-9.-]+/g,"")) || 0;
+                const sub = parseNumber(r[idxSubtotal], 0);
+                const comp = parseNumber(r[idxPCompra], 0);
+                const cant = parseNumber(idxCantidad !== -1 ? r[idxCantidad] : 1, 1);
                 let anoVal = idxAno !== -1 ? r[idxAno] : (r[24] ?? 2023);
 
                 parsedData.push({
                     empresa: String(r[idxEmpresa] ?? 'GENERAL').trim(),
                     vendedor: idxVendedor !== -1 ? String(r[idxVendedor] ?? 'GENERAL').trim() : 'GENERAL',
-                    cantidad: Number(String(r[idxCantidad] ?? 1).replace(/[^0-9.-]+/g,"")) || 1,
+                    cantidad: cant,
                     marca: String(r[idxMarca] ?? 'SUBARU').trim(),
                     modelo: String(r[idxModelo] ?? 'N/D').trim(),
                     ano: Number(String(anoVal).replace(/[^0-9]/g, '')) || 2023,
@@ -392,6 +411,7 @@
                     reader.onload = (evt) => {
                         procesarLibroExcel(XLSX.read(new Uint8Array(evt.target.result), { type: 'array' }));
                         modal.classList.add('hidden');
+                        showToast('Archivo cargado exitosamente', 'success');
                     };
                     reader.readAsArrayBuffer(e.target.files[0]);
                 }
@@ -672,7 +692,6 @@
                 const labelsMarca = Object.keys(marcaMap);
                 const valuesMarca = labelsMarca.map(l => marcaMap[l]);
                 
-                // Mapeo idéntico 1:1 entre etiqueta de marca y color
                 const brandColorMap = {};
                 labelsMarca.forEach((marca, mIdx) => {
                     const mUpper = marca.toUpperCase();
@@ -803,7 +822,7 @@
                             <td class="px-4 py-2.5" style="color: var(--text-main);">${d.marca}</td>
                             <td class="px-4 py-2.5 font-normal" style="color: var(--text-muted);">${d.modelo}</td>
                             <td class="px-4 py-2.5 text-center font-mono font-normal" style="color: ${yearColor};">${d.ano}</td>
-                            <td class="px-4 py-2.5 text-center font-black text-emerald-500 dark:text-emerald-400">${d.cantidad}</td>
+                            <td class="px-4 py-2.5 text-center font-black ${d.cantidad < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'}">${d.cantidad}</td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -814,7 +833,7 @@
                     trSub.innerHTML = `
                         <td class="px-4 py-2"></td>
                         <td class="px-4 py-2 text-xs text-sky-600 dark:text-sky-400" colspan="4">Subtotal Vendedor (${vendedor}):</td>
-                        <td class="px-4 py-2 text-center text-sky-600 dark:text-sky-400 font-bold">${totalVendedor}</td>
+                        <td class="px-4 py-2 text-center ${totalVendedor < 0 ? 'text-rose-500 dark:text-rose-400' : 'text-sky-600 dark:text-sky-400'} font-bold">${totalVendedor}</td>
                     `;
                     tbody.appendChild(trSub);
                 }
@@ -835,7 +854,7 @@
         function exportarExcel() {
             const filtered = getFilteredData();
             if (filtered.length === 0) {
-                alert('No hay datos para exportar.');
+                showToast('No hay datos para exportar.', 'warning');
                 return;
             }
 
@@ -855,6 +874,30 @@
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "U123 Detalle Filtrado");
             XLSX.writeFile(workbook, "Reporte_Seminuevos_Subaru.xlsx");
+            showToast('Reporte Excel generado con éxito', 'success');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-emerald-600 text-white',
+                warning: 'bg-amber-600 text-white',
+                info: 'bg-sky-600 text-white'
+            };
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2 transform transition-all duration-300 opacity-0 translate-y-2 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function formatCurrency(val) {
