@@ -103,6 +103,11 @@
                     <span>Sincronizar</span>
                 </button>
 
+                <button id="btnAiAnalysis" class="flex items-center gap-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-indigo-600/30 border border-purple-400/30">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-300 animate-pulse"></i>
+                    <span>Análisis IA</span>
+                </button>
+
                 <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
                     <span>Cargar Excel</span>
@@ -334,6 +339,35 @@
         </div>
     </div>
 
+    <!-- Modal Flotante de Análisis IA -->
+    <div id="mdlAiAnalysis" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel max-w-4xl w-full rounded-2xl p-6 shadow-2xl relative border border-purple-500/30 my-8 max-h-[90vh] overflow-y-auto" style="background-color: var(--card-bg);">
+            <button id="btnCloseAiModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg w-8 h-8 rounded-full bg-slate-800/80 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="flex items-center gap-3 mb-6 pb-4 border-b border-purple-500/20">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center text-xl shadow-lg shadow-purple-500/20 border border-purple-400/30">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-lg font-extrabold tracking-tight" style="color: var(--text-main);">Análisis Operativo y Eficiencia Posventa</h3>
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            Eficiencia Refacciones vs. Inventario
+                        </span>
+                    </div>
+                    <p class="text-xs" style="color: var(--text-muted);">Evaluación de productividad, rotación de stock y rentabilidad de posventa</p>
+                </div>
+            </div>
+
+            <!-- AI Container Content -->
+            <div id="aiAnalysisContent" class="space-y-6">
+                <!-- Dynamically populated via JS -->
+            </div>
+        </div>
+    </div>
+
     <script>
         Chart.register(ChartDataLabels);
 
@@ -404,6 +438,11 @@
 
             document.getElementById('btnGoogleSheetsSync').onclick = () => {
                 fetchGoogleSheetsData();
+            };
+
+            document.getElementById('btnAiAnalysis').onclick = openAiAnalysisModal;
+            document.getElementById('btnCloseAiModal').onclick = () => {
+                document.getElementById('mdlAiAnalysis').classList.add('hidden');
             };
 
             const uploadModal = document.getElementById('mdlUpload');
@@ -1173,6 +1212,258 @@
 
         function formatCurrency(val) {
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(val || 0);
+        }
+
+        function openAiAnalysisModal() {
+            const container = document.getElementById('aiAnalysisContent');
+            const modal = document.getElementById('mdlAiAnalysis');
+            
+            // Almacenes clave a analizar
+            const defaultAlmacenes = ['VERACRUZ', 'PUEBLA', 'OAXACA'];
+            const uniqueAlmacenes = [...new Set(masterData.map(d => d.almacen || 'VERACRUZ'))];
+            const almacenesToAnalyze = uniqueAlmacenes.length > 0 ? uniqueAlmacenes : defaultAlmacenes;
+
+            const excludeInternas = document.getElementById('chkExcludeInternas').checked;
+
+            let metrics = almacenesToAnalyze.map(alm => {
+                let vRefServ = 0, cRefServ = 0;
+                let vRefMost = 0, cRefMost = 0;
+                let stockValMaster = 0;
+
+                masterData.forEach(d => {
+                    if ((d.almacen || 'VERACRUZ') !== alm) return;
+                    if (excludeInternas && d.hoja === 'Servicio' && String(d.tipoV || '').trim().toLowerCase() === 'interna') return;
+
+                    const v = Number(d.venta) || 0;
+                    const c = Number(d.costo) || 0;
+
+                    if (d.categoria === 'REFACCIONES TALLER') { vRefServ += v; cRefServ += c; }
+                    else if (d.categoria === 'REFACCIONES MOSTRADOR') { vRefMost += v; cRefMost += c; }
+                    else if (d.hoja === 'Existencias' || d.hoja === '175 Existencias' || d.hoja === 'Clasificacion' || d.categoria === 'STOCK') {
+                        stockValMaster += v;
+                    }
+                });
+
+                // Integración con datos de Resumenclas para inventario
+                let sumClasVal = 0;
+                resumenClasData.forEach(row => {
+                    let val = 0;
+                    const sUpper = alm.toUpperCase();
+                    if (sUpper.includes('PUE')) val = Number(row.puebla) || 0;
+                    else if (sUpper.includes('OAX')) val = Number(row.oaxaca) || 0;
+                    else if (sUpper.includes('VER')) val = Number(row.veracruz) || 0;
+                    else val = Number(row[alm]) || 0;
+                    sumClasVal += val;
+                });
+
+                const stockVal = sumClasVal > 0 ? sumClasVal : stockValMaster;
+                const vRefTotal = vRefServ + vRefMost;
+                const cRefTotal = cRefServ + cRefMost;
+                const uRefTotal = vRefTotal - cRefTotal;
+                const refMarginPct = vRefTotal > 0 ? ((uRefTotal / vRefTotal) * 100) : 0;
+                const rotacionVentaStock = stockVal > 0 ? (vRefTotal / stockVal) : 0; // $ Venta por cada $1 de Stock
+
+                return {
+                    almacen: alm,
+                    vRefServ, vRefMost, vRefTotal, cRefTotal, uRefTotal,
+                    stockVal,
+                    refMarginPct,
+                    rotacionStock: rotacionVentaStock
+                };
+            });
+
+            const groupTotalVenta = metrics.reduce((acc, m) => acc + m.vRefTotal, 0);
+            const groupTotalStock = metrics.reduce((acc, m) => acc + m.stockVal, 0);
+            const groupTotalUtilidad = metrics.reduce((acc, m) => acc + m.uRefTotal, 0);
+            const groupAverageRotacion = groupTotalStock > 0 ? (groupTotalVenta / groupTotalStock) : 0;
+
+            metrics.forEach(m => {
+                m.shareVenta = groupTotalVenta > 0 ? (m.vRefTotal / groupTotalVenta) * 100 : 0;
+                m.shareStock = groupTotalStock > 0 ? (m.stockVal / groupTotalStock) * 100 : 0;
+                m.eficienciaRelativa = m.shareStock > 0 ? (m.shareVenta / m.shareStock) : 0;
+            });
+
+            // Ordenar descendentemente por rotación ($ Venta / $ Inventario)
+            metrics.sort((a, b) => b.rotacionStock - a.rotacionStock);
+
+            const winner = metrics[0] || { almacen: 'N/A', vRefTotal: 0, stockVal: 0, rotacionStock: 0, shareVenta: 0, shareStock: 0, eficienciaRelativa: 0 };
+            const runnerUp = metrics[1] || null;
+
+            container.innerHTML = `
+                <!-- Dictamen Ejecutivo Principal -->
+                <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 border border-amber-500/40 shadow-xl">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-5 relative z-10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-2xl font-extrabold shadow-lg shrink-0">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                        DICTAMEN DE EFICIENCIA #1
+                                    </span>
+                                </div>
+                                <h4 class="text-2xl font-black text-white mt-1">El Almacén de <span class="text-amber-400">${winner.almacen}</span> es el más eficiente</h4>
+                                <p class="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                                    Por cada <strong class="text-amber-300">$1.00 cargado en inventario</strong>, ${winner.almacen} genera <strong class="text-emerald-400">$${winner.rotacionStock.toFixed(2)} en ventas de refacciones</strong>. Genera el <strong class="text-sky-300">${winner.shareVenta.toFixed(1)}% de las ventas totales</strong> operando únicamente con el <strong class="text-amber-300">${winner.shareStock.toFixed(1)}% del inventario global</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex md:flex-col gap-3 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 w-full md:w-auto text-center md:text-right shrink-0 justify-around">
+                            <div>
+                                <div class="text-[10px] text-slate-400 font-semibold uppercase">Productividad ($Vta/$Stock)</div>
+                                <div class="text-xl font-black text-emerald-400">$${winner.rotacionStock.toFixed(2)}</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-slate-400 font-semibold uppercase">Índice Eficiencia Share</div>
+                                <div class="text-xl font-black text-sky-400">${winner.eficienciaRelativa.toFixed(2)}x</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparativo Visual: % Venta vs % Stock por Almacén -->
+                <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                        <div>
+                            <h5 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-scale-unbalanced-flip text-amber-400"></i> Comparativa Directa: Participación en Ventas vs. Retención de Inventario
+                            </h5>
+                            <p class="text-xs text-slate-400">Compara el % de ventas que aporta cada almacén contra el % de capital que absorbe en bodega.</p>
+                        </div>
+                        <span class="text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-lg">Total Ventas: ${formatCurrency(groupTotalVenta)} | Stock: ${formatCurrency(groupTotalStock)}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        ${metrics.map((m, idx) => {
+                            let borderClass = idx === 0 ? 'border-amber-500/40 bg-amber-950/10' : 'border-slate-800 bg-slate-900/40';
+                            let badge = idx === 0 
+                                ? '<span class="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">#1 Máxima Eficiencia</span>' 
+                                : (m.eficienciaRelativa >= 0.9 
+                                    ? '<span class="text-[10px] font-bold text-sky-400 bg-sky-500/10 border border-sky-500/30 px-2 py-0.5 rounded">Equilibrado</span>' 
+                                    : '<span class="text-[10px] font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded">Exceso de Stock</span>');
+
+                            return `
+                                <div class="p-4 rounded-xl border ${borderClass} space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <h6 class="font-extrabold text-base text-white">${m.almacen}</h6>
+                                        ${badge}
+                                    </div>
+
+                                    <div class="space-y-2 text-xs">
+                                        <div>
+                                            <div class="flex justify-between font-medium mb-1">
+                                                <span class="text-sky-300">Ventas Refacciones:</span>
+                                                <span class="font-mono font-bold text-sky-300">${formatCurrency(m.vRefTotal)} (${m.shareVenta.toFixed(1)}%)</span>
+                                            </div>
+                                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                <div class="h-full bg-sky-400 rounded-full" style="width: ${m.shareVenta}%;"></div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div class="flex justify-between font-medium mb-1">
+                                                <span class="text-amber-300">Valor Inventario:</span>
+                                                <span class="font-mono font-bold text-amber-300">${formatCurrency(m.stockVal)} (${m.shareStock.toFixed(1)}%)</span>
+                                            </div>
+                                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                <div class="h-full bg-amber-400 rounded-full" style="width: ${m.shareStock}%;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center text-[11px] font-mono">
+                                        <span class="text-slate-400">Rendimiento Capital:</span>
+                                        <span class="font-bold ${m.rotacionStock >= groupAverageRotacion ? 'text-emerald-400' : 'text-rose-400'}">
+                                            $${m.rotacionStock.toFixed(2)} Vta / $1.00 Stock
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Tabla Resumen Ejecutivo Benchmarking -->
+                <div class="glass-panel rounded-2xl p-4 border border-slate-800">
+                    <h5 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-indigo-400"></i> Tabla de Benchmarking Operativo
+                    </h5>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800">
+                        <table class="w-full text-left text-xs" style="color: var(--text-main);">
+                            <thead class="uppercase font-bold border-b bg-slate-900/90 text-slate-400">
+                                <tr>
+                                    <th class="px-3 py-2.5">Almacén</th>
+                                    <th class="px-3 py-2.5 text-right">Venta Refacciones</th>
+                                    <th class="px-3 py-2.5 text-right">Valor Inventario</th>
+                                    <th class="px-3 py-2.5 text-right">% Share Venta</th>
+                                    <th class="px-3 py-2.5 text-right">% Share Inventario</th>
+                                    <th class="px-3 py-2.5 text-right">Ratio Eficiencia</th>
+                                    <th class="px-3 py-2.5 text-center">Diagnóstico Sintético</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800 font-medium">
+                                ${metrics.map((m, idx) => {
+                                    let diagText = '';
+                                    let diagClass = '';
+
+                                    if (m.eficienciaRelativa >= 1.15) {
+                                        diagText = 'Excelente / Capital Altamente Ágil';
+                                        diagClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+                                    } else if (m.eficienciaRelativa >= 0.85) {
+                                        diagText = 'Productividad Aceptable / Balanceado';
+                                        diagClass = 'text-sky-300 bg-sky-500/10 border-sky-500/30';
+                                    } else {
+                                        diagText = 'Inventario Sobredimensionado';
+                                        diagClass = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+                                    }
+
+                                    return `
+                                        <tr class="hover:bg-slate-800/30">
+                                            <td class="px-3 py-2.5 font-bold text-white">${m.almacen}</td>
+                                            <td class="px-3 py-2.5 text-right font-mono font-semibold text-sky-300">${formatCurrency(m.vRefTotal)}</td>
+                                            <td class="px-3 py-2.5 text-right font-mono text-amber-300">${formatCurrency(m.stockVal)}</td>
+                                            <td class="px-3 py-2.5 text-right font-mono font-bold text-sky-400">${m.shareVenta.toFixed(1)}%</td>
+                                            <td class="px-3 py-2.5 text-right font-mono font-bold text-amber-400">${m.shareStock.toFixed(1)}%</td>
+                                            <td class="px-3 py-2.5 text-right font-mono font-extrabold text-emerald-400 text-sm">
+                                                $${m.rotacionStock.toFixed(2)}
+                                            </td>
+                                            <td class="px-3 py-2.5 text-center">
+                                                <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${diagClass}">
+                                                    ${diagText}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Conclusiones Breves y Acciones Clave -->
+                <div class="glass-panel p-4 rounded-2xl border border-slate-800">
+                    <h5 class="text-xs font-bold text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb"></i> Conclusión Estratégica Comparativa
+                    </h5>
+                    <ul class="text-xs space-y-2 text-slate-300">
+                        ${metrics.map(m => {
+                            let tip = '';
+                            if (m.almacen === winner.almacen) {
+                                tip = `<strong class="text-emerald-400">${m.almacen}:</strong> Modelo ideal de rotación. Maximiza la facturación sin sobrecargar capital en bodega. Mantener reabastecimiento oportuno.`;
+                            } else if (m.shareStock > m.shareVenta) {
+                                tip = `<strong class="text-rose-400">${m.almacen}:</strong> Retiene un % de inventario (${m.shareStock.toFixed(1)}%) superior a su aporte de ventas (${m.shareVenta.toFixed(1)}%). Se recomienda auditar obsolescencia y realizar transferencias internas a plazas con mayor demanda.`;
+                            } else {
+                                tip = `<strong class="text-sky-300">${m.almacen}:</strong> Mantiene un desempeño estable. Alineado entre facturación y stock retenido.`;
+                            }
+                            return `<li class="flex items-start gap-2"><i class="fa-solid fa-circle-right text-amber-400 mt-1 shrink-0 text-[10px]"></i><span>${tip}</span></li>`;
+                        }).join('')}
+                    </ul>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
         }
     </script>
 </body>
