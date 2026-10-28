@@ -1050,13 +1050,13 @@
 
                 const trSucTotal = document.createElement('tr');
                 trSucTotal.className = 'border-b-2 font-black';
-                trSucTotal.style.backgroundColor = 'rgba(56, 189, 248, 0.08)';
-                trSucTotal.style.borderColor = 'var(--table-border)';
+                trSucTotal.style.backgroundColor = 'rgba(249, 115, 22, 0.28)';
+                trSucTotal.style.borderColor = 'rgba(249, 115, 22, 0.5)';
                 trSucTotal.innerHTML = `
                     <td colspan="3" class="px-4 py-2.5 text-right text-xs uppercase tracking-wider" style="color: var(--text-main);">
-                        Total Sucursal <span class="text-sky-400">${sucName}</span>:
+                        Total Sucursal <span class="text-amber-500 font-extrabold">${sucName}</span>:
                     </td>
-                    <td class="px-4 py-2.5 text-center text-sm font-black text-sky-400">
+                    <td class="px-4 py-2.5 text-center text-sm font-black text-amber-500">
                         ${sucData.totalSucursalQty}
                     </td>
                 `;
