@@ -21,7 +21,7 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--bg-main, #0b0f19);
             color: var(--text-main, #f1f5f9);
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: background 0.4s ease, color 0.3s ease;
         }
 
         /* Variables Tema Oscuro (Por Defecto) */
@@ -30,6 +30,7 @@
             --text-main: #f1f5f9;
             --panel-bg: rgba(15, 23, 42, 0.75);
             --panel-border: rgba(255, 255, 255, 0.08);
+            --panel-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
             --card-bg: rgba(30, 41, 59, 0.6);
             --card-border: rgba(255, 255, 255, 0.05);
             --header-bg: rgba(15, 23, 42, 0.8);
@@ -39,62 +40,85 @@
             --text-muted: #94a3b8;
             --table-header: rgba(15, 23, 42, 0.9);
             --table-border: #1e293b;
+            --glass-blur: 12px;
         }
 
-        /* Variables Tema Claro */
-        body.theme-light {
-            --bg-main: #f1f5f9;
-            --text-main: #0f172a;
-            --panel-bg: rgba(255, 255, 255, 0.85);
-            --panel-border: rgba(0, 0, 0, 0.08);
-            --card-bg: rgba(255, 255, 255, 0.9);
-            --card-border: rgba(0, 0, 0, 0.06);
-            --header-bg: rgba(255, 255, 255, 0.9);
-            --header-border: #e2e8f0;
-            --input-bg: #ffffff;
-            --input-border: #cbd5e1;
-            --text-muted: #64748b;
-            --table-header: rgba(241, 245, 249, 0.9);
-            --table-border: #e2e8f0;
+        /* Variables Diseño Glass Moderno */
+        body.theme-glass {
+            --bg-main: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.35) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(129, 140, 248, 0.35) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.25) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(14, 165, 233, 0.3) 0px, transparent 50%);
+            background-attachment: fixed;
+            --text-main: #ffffff;
+            --panel-bg: rgba(255, 255, 255, 0.08);
+            --panel-border: rgba(255, 255, 255, 0.22);
+            --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --card-border: rgba(255, 255, 255, 0.25);
+            --header-bg: rgba(15, 23, 42, 0.45);
+            --header-border: rgba(255, 255, 255, 0.18);
+            --input-bg: rgba(255, 255, 255, 0.12);
+            --input-border: rgba(255, 255, 255, 0.28);
+            --text-muted: #cbd5e1;
+            --table-header: rgba(255, 255, 255, 0.12);
+            --table-border: rgba(255, 255, 255, 0.15);
+            --glass-blur: 20px;
         }
 
         .glass-panel {
             background: var(--panel-bg);
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
             border: 1px solid var(--panel-border);
-            transition: background 0.3s ease, border 0.3s ease;
+            box-shadow: var(--panel-shadow);
+            transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
         }
+
         .glass-card {
             background: var(--card-bg);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+            -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
             border: 1px solid var(--card-border);
-            transition: transform 0.2s ease, border-color 0.2s ease, background 0.3s ease;
+            box-shadow: var(--panel-shadow);
+            transition: transform 0.25s ease, border-color 0.25s ease, background 0.3s ease, box-shadow 0.25s ease;
         }
+
         .glass-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(56, 189, 248, 0.3);
+            transform: translateY(-3px);
+            border-color: rgba(56, 189, 248, 0.55);
+            box-shadow: 0 12px 36px 0 rgba(56, 189, 248, 0.18), inset 0 1px 0 0 rgba(255, 255, 255, 0.35);
         }
+
+        /* Ajustes para selects en modo Glass */
+        body.theme-glass select option {
+            background-color: #0f172a;
+            color: #ffffff;
+        }
+
         /* Scrollbars */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: var(--input-bg);
+            background: rgba(15, 23, 42, 0.4);
         }
         ::-webkit-scrollbar-thumb {
             background: var(--input-border);
             border-radius: 3px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+            background: #38bdf8;
         }
     </style>
 </head>
 <body class="min-h-screen pb-12 theme-dark" id="appBody">
 
     <!-- ENCABEZADO -->
-    <header class="sticky top-0 z-40 border-b bg-slate-950/80 backdrop-blur-md px-4 lg:px-8 py-3 transition-colors duration-300" id="mainHeader" style="border-color: var(--header-border); background-color: var(--header-bg);">
+    <header class="sticky top-0 z-40 border-b backdrop-blur-xl px-4 lg:px-8 py-3 transition-colors duration-300" id="mainHeader" style="border-color: var(--header-border); background-color: var(--header-bg);">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
@@ -108,25 +132,25 @@
                 </div>
             </div>
 
-            <!-- Botones de Acción y Selector de Tema -->
+            <!-- Botones de Acción y Selector de Diseño -->
             <div class="flex flex-wrap items-center gap-3">
-                <!-- Botón Cambio de Tema (Claro / Oscuro) -->
-                <button id="btnToggleTheme" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm border border-slate-700/60 bg-slate-800/90 text-slate-200 hover:bg-slate-700">
-                    <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
-                    <span id="themeText">Tema Claro</span>
+                <!-- Botón Cambio de Diseño (Oscuro / Diseño Glass) -->
+                <button id="btnToggleTheme" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm border border-sky-500/40 bg-slate-800/80 text-slate-100 hover:bg-slate-700/80 backdrop-blur-md">
+                    <i id="themeIcon" class="fa-solid fa-wand-magic-sparkles text-sky-400"></i>
+                    <span id="themeText">Diseño Glass</span>
                 </button>
 
-                <label class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700/60 bg-slate-900/90 text-slate-300 hover:text-white transition">
+                <label class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700/60 bg-slate-900/80 text-slate-300 hover:text-white transition backdrop-blur-md">
                     <input type="checkbox" id="chkExcludeIntercambio" checked class="w-4 h-4 rounded border-slate-700 text-sky-500 focus:ring-sky-500/30 bg-slate-800">
                     <span>Excluir Intercambios</span>
                 </label>
 
-                <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">
+                <button id="btnUploadModal" class="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 text-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm backdrop-blur-md">
                     <i class="fa-solid fa-file-excel text-emerald-400"></i>
                     <span>Cargar Excel</span>
                 </button>
 
-                <button id="btnExportCSV" class="flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-sky-600/20">
+                <button id="btnExportCSV" class="flex items-center gap-2 bg-sky-600/90 hover:bg-sky-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold transition shadow-md shadow-sky-600/20 backdrop-blur-md">
                     <i class="fa-solid fa-download"></i>
                     <span>Exportar Reporte</span>
                 </button>
@@ -137,7 +161,7 @@
     <main class="max-w-7xl mx-auto px-4 lg:px-8 pt-6 space-y-6">
 
         <!-- Banner Informativo -->
-        <div id="bannerIntercambio" class="flex items-center justify-between bg-sky-950/40 border border-sky-800/40 rounded-xl px-4 py-2 text-xs text-sky-200">
+        <div id="bannerIntercambio" class="flex items-center justify-between bg-sky-950/40 backdrop-blur-md border border-sky-400/30 rounded-xl px-4 py-2 text-xs text-sky-200 shadow-sm">
             <div class="flex items-center gap-2.5">
                 <i class="fa-solid fa-circle-info text-sky-400 text-sm"></i>
                 <span>Regla de Negocio Activa: <strong>Se están excluyendo los registros con Tipo de Venta de Intercambio</strong> en todas las métricas y gráficas.</span>
@@ -146,12 +170,12 @@
         </div>
 
         <!-- FILTROS EN LA PARTE SUPERIOR -->
-        <section class="glass-panel rounded-2xl p-4 shadow-xl">
+        <section class="glass-panel rounded-2xl p-4">
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <!-- Filtro Sucursal -->
                 <div>
                     <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Sucursal</label>
-                    <select id="selSucursal" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                    <select id="selSucursal" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-400 border backdrop-blur-md" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
                         <option value="TODOS">Todas las sucursales</option>
                     </select>
                 </div>
@@ -159,7 +183,7 @@
                 <!-- Filtro Tipo de Venta -->
                 <div>
                     <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Tipo de Venta</label>
-                    <select id="selTipoVenta" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                    <select id="selTipoVenta" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-400 border backdrop-blur-md" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
                         <option value="TODOS">Todos los canales</option>
                     </select>
                 </div>
@@ -167,7 +191,7 @@
                 <!-- Filtro Vendedor -->
                 <div>
                     <label class="block text-xs font-semibold mb-1" style="color: var(--text-muted);">Asesor de Ventas</label>
-                    <select id="selVendedor" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-500" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
+                    <select id="selVendedor" class="w-full rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-sky-400 border backdrop-blur-md" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);">
                         <option value="TODOS">Todos los vendedores</option>
                     </select>
                 </div>
@@ -180,7 +204,7 @@
             <div class="glass-card rounded-2xl p-4">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Unidades Vendidas</span>
-                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-sm border border-emerald-400/20">
                         <i class="fa-solid fa-car-side"></i>
                     </div>
                 </div>
@@ -192,7 +216,7 @@
             <div class="glass-card rounded-2xl p-4">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Venta Bruta</span>
-                    <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-sm">
+                    <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center text-sm border border-sky-400/20">
                         <i class="fa-solid fa-sack-dollar"></i>
                     </div>
                 </div>
@@ -204,7 +228,7 @@
             <div class="glass-card rounded-2xl p-4">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Costo Total</span>
-                    <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-sm">
+                    <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center text-sm border border-rose-400/20">
                         <i class="fa-solid fa-file-invoice-dollar"></i>
                     </div>
                 </div>
@@ -216,7 +240,7 @@
             <div class="glass-card rounded-2xl p-4">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">% Utilidad Promedio</span>
-                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-sm">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center text-sm border border-amber-400/20">
                         <i class="fa-solid fa-chart-line"></i>
                     </div>
                 </div>
@@ -229,7 +253,7 @@
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <!-- Chart 1: Performance por Sucursal -->
-            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+            <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <div>
@@ -238,7 +262,7 @@
                             </h3>
                             <p class="text-xs" style="color: var(--text-muted);">Cantidad de unidades netas por agencia</p>
                         </div>
-                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold" style="background-color: var(--input-bg); color: var(--text-main);" id="badgeSucursales">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-semibold border" style="background-color: var(--input-bg); border-color: var(--input-border); color: var(--text-main);" id="badgeSucursales">
                             0 Agencias
                         </span>
                     </div>
@@ -253,7 +277,7 @@
             </div>
 
             <!-- Chart 2: Mezcla por Tipo de Venta por Sucursal -->
-            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+            <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between">
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <div>
@@ -270,7 +294,7 @@
         </section>
 
         <!-- TABLA DE DETALLE OPERATIVO -->
-        <section class="glass-panel rounded-2xl p-5 shadow-xl">
+        <section class="glass-panel rounded-2xl p-5">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                     <h3 class="text-base font-bold flex items-center gap-2" style="color: var(--text-main);">
@@ -278,12 +302,12 @@
                     </h3>
                     <p class="text-xs" style="color: var(--text-muted);">Resumen consolidado por Vendedor, Sucursal, Línea de Vehículo y Cantidad</p>
                 </div>
-                <span class="text-xs px-3 py-1.5 rounded-lg" style="background-color: var(--input-bg); color: var(--text-muted); border: 1px solid var(--input-border);" id="tableRecordCount">
+                <span class="text-xs px-3 py-1.5 rounded-lg backdrop-blur-md" style="background-color: var(--input-bg); color: var(--text-muted); border: 1px solid var(--input-border);" id="tableRecordCount">
                     Mostrando 0 registros
                 </span>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border" style="border-color: var(--table-border);">
+            <div class="overflow-x-auto rounded-xl border backdrop-blur-md" style="border-color: var(--table-border);">
                 <table class="w-full text-left text-xs" style="color: var(--text-main);">
                     <thead class="uppercase font-bold border-b" style="background-color: var(--table-header); border-color: var(--table-border); color: var(--text-muted);">
                         <tr>
@@ -302,7 +326,7 @@
 
     <!-- Modal para Cargar Archivo Excel -->
     <div id="mdlUpload" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative" style="background-color: var(--card-bg);">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 shadow-2xl relative">
             <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -315,9 +339,9 @@
             </div>
 
             <div class="border-2 border-dashed rounded-xl p-8 text-center transition cursor-pointer" style="border-color: var(--input-border); background-color: var(--input-bg);" id="dropZone">
-                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-500 mb-2"></i>
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
                 <p class="text-xs font-semibold" style="color: var(--text-main);">Haz clic o arrastra aquí tu archivo Excel</p>
-                <p class="text-[10px] text-slate-500 mt-1">Soporta archivos .xlsx / .xls</p>
+                <p class="text-[10px] text-slate-400 mt-1">Soporta archivos .xlsx / .xls</p>
                 <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden">
             </div>
         </div>
@@ -385,20 +409,19 @@
             cargarDatosDesdeGoogleSheets();
         });
 
-        // 🌗 Lógica para Cambio de Tema (Claro / Oscuro)
+        // 💎 Lógica para Cambio de Diseño (Oscuro / Diseño Glass)
         function initThemeToggle() {
             const btnToggle = document.getElementById('btnToggleTheme');
             const appBody = document.getElementById('appBody');
-            const themeIcon = document.getElementById('themeIcon');
-            const themeText = document.getElementById('themeText');
 
             const savedTheme = localStorage.getItem('subaru_dashboard_theme') || 'theme-dark';
-            appBody.className = `min-h-screen pb-12 ${savedTheme}`;
-            updateThemeButtonUI(savedTheme);
+            const validTheme = (savedTheme === 'theme-glass' || savedTheme === 'theme-dark') ? savedTheme : 'theme-dark';
+            appBody.className = `min-h-screen pb-12 ${validTheme}`;
+            updateThemeButtonUI(validTheme);
 
             btnToggle.onclick = () => {
-                const currentTheme = appBody.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light';
-                const newTheme = currentTheme === 'theme-dark' ? 'theme-light' : 'theme-dark';
+                const currentTheme = appBody.classList.contains('theme-dark') ? 'theme-dark' : 'theme-glass';
+                const newTheme = currentTheme === 'theme-dark' ? 'theme-glass' : 'theme-dark';
                 
                 appBody.className = `min-h-screen pb-12 ${newTheme}`;
                 localStorage.setItem('subaru_dashboard_theme', newTheme);
@@ -411,12 +434,12 @@
         function updateThemeButtonUI(theme) {
             const themeIcon = document.getElementById('themeIcon');
             const themeText = document.getElementById('themeText');
-            if (theme === 'theme-light') {
-                themeIcon.className = 'fa-solid fa-moon text-indigo-600';
+            if (theme === 'theme-glass') {
+                themeIcon.className = 'fa-solid fa-moon text-indigo-300';
                 themeText.textContent = 'Tema Oscuro';
             } else {
-                themeIcon.className = 'fa-solid fa-sun text-amber-400';
-                themeText.textContent = 'Tema Claro';
+                themeIcon.className = 'fa-solid fa-wand-magic-sparkles text-sky-400';
+                themeText.textContent = 'Diseño Glass';
             }
         }
 
@@ -678,7 +701,6 @@
             renderTableByVendedorLinea(filtered);
         }
 
-        // --- FUNCIÓN ACTUALIZADA: MUESTRA UTILIDAD EN % Y EN PESOS ---
         function renderResumenFinancieroPorSucursal(resumenData) {
             const containerSucCards = document.getElementById('sucursalesDetailCards');
             if (!containerSucCards) return;
@@ -687,7 +709,7 @@
             const sucursalesKeys = Object.keys(resumenData);
 
             if (sucursalesKeys.length === 0) {
-                containerSucCards.innerHTML = '<p class="text-xs text-slate-500 col-span-2 text-center py-2">Sin datos financieros para mostrar.</p>';
+                containerSucCards.innerHTML = '<p class="text-xs text-slate-400 col-span-2 text-center py-2">Sin datos financieros para mostrar.</p>';
                 return;
             }
 
@@ -697,17 +719,15 @@
                 const costoSuc = dataSuc.costo;
                 const unidadesNetas = dataSuc.unidades;
                 
-                // Cálculo de utilidad en pesos
                 const utilidadPesos = vBruta - costoSuc;
 
-                // Cálculo de porcentaje de utilidad
                 let utilSuc = '0.00';
                 if (vBruta !== 0) {
                     utilSuc = ((utilidadPesos / Math.abs(vBruta)) * 100).toFixed(2);
                 }
 
                 const card = document.createElement('div');
-                card.className = 'border rounded-xl p-3 flex justify-between items-center shadow-sm';
+                card.className = 'border rounded-xl p-3 flex justify-between items-center shadow-sm backdrop-blur-md';
                 card.style.backgroundColor = 'var(--input-bg)';
                 card.style.borderColor = 'var(--table-border)';
                 card.innerHTML = `
@@ -765,7 +785,7 @@
                     backgroundColor: sucColors,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.15)'
+                    borderColor: 'rgba(255,255,255,0.25)'
                 }]
             }, {
                 plugins: {
@@ -786,7 +806,7 @@
                         align: 'top',
                         offset: 4,
                         color: '#38bdf8',
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)',
                         borderColor: 'rgba(56, 189, 248, 0.5)',
                         borderWidth: 1,
                         borderRadius: 6,
@@ -799,11 +819,11 @@
                     y: {
                         beginAtZero: true,
                         grace: '20%',
-                        ticks: { color: '#94a3b8', stepSize: 1 },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        ticks: { color: '#cbd5e1', stepSize: 1 },
+                        grid: { color: 'rgba(255,255,255,0.08)' }
                     },
                     x: {
-                        ticks: { color: '#94a3b8', font: { weight: '600' } },
+                        ticks: { color: '#cbd5e1', font: { weight: '600' } },
                         grid: { display: false }
                     }
                 }
@@ -839,7 +859,7 @@
 
             if (sucursales.length === 0) {
                 container.innerHTML = `
-                    <div class="col-span-2 text-center py-10 text-slate-500 text-xs">
+                    <div class="col-span-2 text-center py-10 text-slate-400 text-xs">
                         No hay datos para mostrar la mezcla por tipo de venta.
                     </div>
                 `;
@@ -872,7 +892,7 @@
                 summaryHtml += '</div>';
 
                 const wrapper = document.createElement('div');
-                wrapper.className = 'border rounded-xl p-3 flex flex-col items-center justify-between';
+                wrapper.className = 'border rounded-xl p-3 flex flex-col items-center justify-between backdrop-blur-md';
                 wrapper.style.backgroundColor = 'var(--input-bg)';
                 wrapper.style.borderColor = 'var(--table-border)';
                 wrapper.innerHTML = `
@@ -892,7 +912,7 @@
                         data: values,
                         backgroundColor: palette.slice(0, labels.length),
                         borderWidth: 2,
-                        borderColor: 'var(--panel-bg)'
+                        borderColor: 'rgba(15, 23, 42, 0.4)'
                     }]
                 }, {
                     plugins: {
@@ -978,7 +998,7 @@
             if (rowsList.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" class="text-center py-8 text-slate-500">
+                        <td colspan="4" class="text-center py-8 text-slate-400">
                             No se encontraron registros para los filtros seleccionados
                         </td>
                     </tr>
@@ -1016,7 +1036,7 @@
                 Object.entries(sucData.vendedores).forEach(([vendedorName, vGroup]) => {
                     vGroup.items.forEach(r => {
                         const tr = document.createElement('tr');
-                        tr.className = 'transition border-b';
+                        tr.className = 'transition border-b hover:bg-white/5';
                         tr.style.borderColor = 'var(--table-border)';
 
                         tr.innerHTML = `
@@ -1054,9 +1074,9 @@
                 trSucTotal.style.borderColor = 'rgba(249, 115, 22, 0.5)';
                 trSucTotal.innerHTML = `
                     <td colspan="3" class="px-4 py-2.5 text-right text-xs uppercase tracking-wider" style="color: var(--text-main);">
-                        Total Sucursal <span class="text-amber-500 font-extrabold">${sucName}</span>:
+                        Total Sucursal <span class="text-amber-400 font-extrabold">${sucName}</span>:
                     </td>
-                    <td class="px-4 py-2.5 text-center text-sm font-black text-amber-500">
+                    <td class="px-4 py-2.5 text-center text-sm font-black text-amber-400">
                         ${sucData.totalSucursalQty}
                     </td>
                 `;
