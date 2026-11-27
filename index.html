@@ -706,7 +706,7 @@
             if (!containerSucCards) return;
 
             containerSucCards.innerHTML = '';
-            const sucursalesKeys = Object.keys(resumenData);
+            const sucursalesKeys = sortSucursalesByCustomOrder(Object.keys(resumenData));
 
             if (sucursalesKeys.length === 0) {
                 containerSucCards.innerHTML = '<p class="text-xs text-slate-400 col-span-2 text-center py-2">Sin datos financieros para mostrar.</p>';
@@ -748,6 +748,25 @@
             });
         }
 
+        function sortSucursalesByCustomOrder(sucursalesList) {
+            const ordenDeseado = ['VERACRUZ', 'CORDOBA', 'PUEBLA', 'SERDAN', 'OAXACA'];
+            const getOrderIndex = (name) => {
+                const norm = String(name || '')
+                    .toUpperCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+                const idx = ordenDeseado.findIndex(key => norm.includes(key));
+                return idx === -1 ? ordenDeseado.length : idx;
+            };
+
+            return [...sucursalesList].sort((a, b) => {
+                const idxA = getOrderIndex(a);
+                const idxB = getOrderIndex(b);
+                if (idxA !== idxB) return idxA - idxB;
+                return String(a).localeCompare(String(b));
+            });
+        }
+
         function renderCharts(data) {
             const sucursalMap = {};
             const sucursalMontoMap = {};
@@ -765,12 +784,13 @@
                 sucursalCostoMap[s] += (d.costo || 0);
             });
 
-            const sucLabels = Object.keys(sucursalMap);
+            const sucLabels = sortSucursalesByCustomOrder(Object.keys(sucursalMap));
             const sucUnidades = sucLabels.map(k => sucursalMap[k]);
 
             const sucColors = sucLabels.map(label => {
-                const l = label.toUpperCase();
-                if (l.includes('VERACRUZ')) return '#38bdf8';
+                const l = label.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if (l.includes('VERACRUZ') || l.includes('CORDOBA')) return '#38bdf8';
+                if (l.includes('PUEBLA') || l.includes('SERDAN')) return '#818cf8';
                 if (l.includes('OAXACA')) return '#c86d51';
                 return '#818cf8';
             });
@@ -855,7 +875,7 @@
                 sucursalGroup[suc].totalQty += qty;
             });
 
-            const sucursales = Object.keys(sucursalGroup);
+            const sucursales = sortSucursalesByCustomOrder(Object.keys(sucursalGroup));
 
             if (sucursales.length === 0) {
                 container.innerHTML = `
@@ -1007,8 +1027,10 @@
             }
 
             rowsList.sort((a, b) => {
-                const sucCompare = a.sucursal.localeCompare(b.sucursal);
-                if (sucCompare !== 0) return sucCompare;
+                const orderedSucs = sortSucursalesByCustomOrder([a.sucursal, b.sucursal]);
+                if (a.sucursal !== b.sucursal) {
+                    return orderedSucs[0] === a.sucursal ? -1 : 1;
+                }
                 return a.vendedor.localeCompare(b.vendedor);
             });
 
@@ -1032,7 +1054,10 @@
                 sucursalGroups[r.sucursal].totalSucursalQty += r.cantidadTotal;
             });
 
-            Object.entries(sucursalGroups).forEach(([sucName, sucData]) => {
+            const orderedSucursalNames = sortSucursalesByCustomOrder(Object.keys(sucursalGroups));
+
+            orderedSucursalNames.forEach((sucName) => {
+                const sucData = sucursalGroups[sucName];
                 Object.entries(sucData.vendedores).forEach(([vendedorName, vGroup]) => {
                     vGroup.items.forEach(r => {
                         const tr = document.createElement('tr');
